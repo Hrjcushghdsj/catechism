@@ -1,0 +1,2053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Catechism Browser</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-alt: #f6f4ef;
+    --sidebar-bg: #faf8f3;
+    --text: #1c1b19;
+    --muted: #6b675f;
+    --accent: hsl(30, 59%, 30%);
+    --accent-soft: #f1e4e4;
+    --border: #ddd8cf;
+    --highlight: #fff1b8;
+    --shadow: rgba(0,0,0,.14);
+    --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  [data-theme="dark"] {
+    --bg: #000000;
+    --bg-alt: #101010;
+    --sidebar-bg: #101010;
+    --text: #e9e6e0;
+    --muted: #a7a299;
+    --accent: hsl(30, 53%, 74%);
+    --accent-soft: #332323;
+    --border: #606060;
+    --highlight: #4a3f16;
+    --shadow: rgba(0,0,0,.5);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- Header ---------- */
+  #topbar {
+    height: 56px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+    background: var(--bg-alt);
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    z-index: 30;
+  }
+  #brand { font-weight: 700; font-size: 0.98rem; white-space: nowrap; }
+  #brand span { font-weight: 400; font-size: 0.8rem; color: var(--muted); margin-left: 4px; }
+  #menu-toggle {
+    display: none; background: none; border: 1px solid var(--border); color: var(--text);
+    border-radius: 6px; width: 38px; height: 38px; font-size: 1.1rem; cursor: pointer;
+  }
+  #search-wrap { position: relative; margin-left: auto; width: min(460px, 46vw); }
+  #search {
+    width: 100%; padding: 8px 12px; font-size: 0.9rem; font-family: var(--sans);
+    color: var(--text); background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; outline: none;
+  }
+  #search:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+
+  /* ---------- Theme button ---------- */
+  #theme-btn {
+    display: flex; align-items: center; justify-content: center;
+    background: none; border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; width: 38px; height: 38px; padding: 0;
+    cursor: pointer; flex-shrink: 0;
+  }
+  #theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+  #theme-btn svg { display: block; }
+
+  /* ---------- Search results ---------- */
+  #search-results {
+    position: absolute; top: calc(100% + 6px); right: 0; width: min(600px, 86vw);
+    max-height: 66vh; overflow-y: auto; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; box-shadow: 0 12px 40px var(--shadow); display: none; z-index: 60;
+  }
+  #search-results.open { display: block; }
+  .sr-header {
+    position: sticky; top: 0; padding: 7px 12px; font-size: 0.72rem;
+    text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+    background: var(--bg-alt); border-bottom: 1px solid var(--border);
+  }
+  .sr-item { padding: 9px 13px; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .sr-item:last-child { border-bottom: none; }
+  .sr-item:hover { background: var(--bg-alt); }
+  .sr-title { font-size: 0.84rem; font-weight: 600; color: var(--accent); }
+  .sr-snippet { margin-top: 3px; font-size: 0.8rem; line-height: 1.45; color: var(--muted); font-family: var(--serif); }
+  .sr-snippet mark { background: var(--highlight); color: inherit; padding: 0 1px; border-radius: 2px; }
+  .sr-empty { padding: 16px; color: var(--muted); font-size: 0.9rem; }
+
+  /* ---------- Layout ---------- */
+  #layout { flex: 1; display: flex; min-height: 0; }
+  #sidebar {
+    width: 350px; flex-shrink: 0; overflow-y: auto; background: var(--sidebar-bg);
+    border-right: 1px solid var(--border); padding: 10px 0 40px;
+  }
+  #content { flex: 1; overflow-y: auto; padding: 30px 36px 90px; scroll-behavior: smooth; }
+  #page { max-width: 790px; margin: 0 auto; }
+
+  /* ---------- Reference banner ---------- */
+  #refs-banner {
+    max-width: 790px; margin: 0 auto 18px; padding: 10px 14px;
+    background: var(--accent-soft); border: 1px solid var(--border);
+    border-radius: 8px; font-family: var(--sans); font-size: 0.84rem;
+    color: var(--text); display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  #refs-banner code { background: var(--bg); padding: 1px 4px; border-radius: 4px; }
+  #refs-banner .refs-btn {
+    margin-left: auto; padding: 6px 11px; border: 1px solid var(--border);
+    border-radius: 7px; background: var(--bg); color: var(--accent);
+    font-weight: 600; font-size: 0.8rem; cursor: pointer;
+  }
+  #refs-banner .refs-btn:hover { border-color: var(--accent); }
+  #refs-banner input[type="file"] { display: none; }
+
+  /* ---------- Tree ---------- */
+  .tree { list-style: none; margin: 0; padding-left: 15px; }
+  #tree-container > .tree { padding-left: 6px; }
+  .tree-row {
+    display: flex; align-items: flex-start; gap: 5px; padding: 3px 8px 3px 4px;
+    border-radius: 5px; cursor: pointer; font-size: 0.82rem; line-height: 1.32; color: var(--text);
+  }
+  .tree-row:hover { background: var(--bg-alt); }
+  .tree-row.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .tree-row.has-page .tree-label { font-weight: 600; }
+  .tree-row.active .tree-label { font-weight: 700; }
+  .tree-label { flex: 1; }
+  .toggle {
+    width: 14px; flex-shrink: 0; color: var(--muted); font-size: 0.7rem; line-height: 1.5;
+    text-align: center; transition: transform .15s ease;
+  }
+  li.collapsed > .tree-row .toggle { transform: rotate(0deg); }
+  li:not(.collapsed) > .tree-row .toggle { transform: rotate(90deg); }
+  li.collapsed > ul { display: none; }
+
+  /* ---------- Page content ---------- */
+  .page-header h2 {
+    font-family: var(--sans); font-size: 1.55rem; line-height: 1.24;
+    color: var(--accent); margin: 0 0 1.2rem;
+  }
+  .page-body { font-family: var(--serif); font-size: 1.06rem; line-height: 1.72; }
+  .para { margin: 0 0 0.92em; }
+  .para.indent { margin-left: 2.1em; }
+  .para.blank { height: 0.55em; margin: 0; }
+  .para.heading {
+    font-family: var(--sans); font-size: 1.08rem; font-weight: 700;
+    margin: 1.7em 0 0.55em; line-height: 1.3;
+  }
+  .para.subheading { font-weight: 700; margin-top: 1.35em; }
+  .para.highlight {
+    background: var(--highlight); border-radius: 5px;
+    box-shadow: 0 0 0 5px var(--highlight); animation: pulseBg 2.2s ease;
+  }
+  @keyframes pulseBg { 0% { background: var(--highlight); } 100% { background: var(--highlight); } }
+
+  .bold { font-weight: 700; }
+  .italic { font-style: italic; }
+  .heavy { font-weight: 700; }
+
+  a.ccc-ref {
+    color: var(--accent); font-family: var(--sans); font-size: 0.78em; font-weight: 700;
+    text-decoration: none; margin-right: 0.32em; border-bottom: 1px dotted transparent; cursor: pointer;
+  }
+  a.ccc-ref:hover { border-bottom-color: currentColor; }
+
+  sup.fn-ref {
+    color: var(--accent); font-family: var(--sans); font-size: 0.68em; font-weight: 700;
+    cursor: pointer; padding: 0 1px; user-select: none;
+  }
+  sup.fn-ref:hover { text-decoration: underline; }
+
+  a.anchor-ref { color: var(--muted); font-size: 0.72em; text-decoration: none; margin: 0 1px; }
+  a.anchor-ref:hover { color: var(--accent); }
+
+  /* ---------- See also / cross-reference lines ---------- */
+  .see-also {
+    font-family: var(--sans); font-size: 0.8rem; color: var(--muted);
+    margin: -0.35em 0 1.1em 0.2em; line-height: 1.5;
+  }
+  .see-also a {
+    color: var(--accent); text-decoration: none; font-weight: 600;
+    border-bottom: 1px dotted currentColor; cursor: pointer;
+  }
+  .see-also a:hover { border-bottom-style: solid; }
+  .see-also .xref-label { font-weight: 600; color: var(--muted); }
+  .see-also .xref-missing { color: var(--muted); font-weight: 600; cursor: help; }
+  .see-also.back { margin-top: -0.55em; }
+
+  /* ---------- Footnotes / backlinks ---------- */
+  .footnotes, .backlinks {
+    margin-top: 2.4em; padding-top: 1em; border-top: 1px solid var(--border);
+    font-family: var(--sans); font-size: 0.84rem; line-height: 1.5; color: var(--muted);
+  }
+  .footnotes h3, .backlinks h3 {
+    font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--muted); margin: 0 0 0.6em;
+  }
+  .footnotes ol { margin: 0; padding-left: 0; list-style: none; }
+  .footnotes li { margin-bottom: 0.35em; }
+  .footnotes li.flash { background: var(--highlight); border-radius: 4px; }
+  .footnotes a { color: var(--accent); }
+  .fn-num { font-weight: 700; }
+  .backlinks ul { margin: 0; padding-left: 1.3em; }
+  .backlinks li { margin-bottom: 0.25em; }
+  .backlinks a { color: var(--accent); text-decoration: none; }
+  .backlinks a:hover { text-decoration: underline; }
+
+  /* ---------- Pager ---------- */
+  #pager {
+    max-width: 790px; margin: 36px auto 0; padding-top: 16px;
+    border-top: 1px solid var(--border); display: flex; align-items: center;
+    justify-content: space-between; gap: 10px; font-size: 0.8rem;
+  }
+  #pager button {
+    background: var(--bg-alt); border: 1px solid var(--border); color: var(--text);
+    border-radius: 7px; padding: 7px 12px; font-size: 0.8rem; cursor: pointer;
+    max-width: 42%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  #pager button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  #pager button:disabled { opacity: 0.38; cursor: default; }
+  #pager-label { color: var(--muted); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+
+  /* ---------- Tooltip ---------- */
+  #tooltip {
+    position: fixed; max-width: 380px; padding: 10px 13px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    box-shadow: 0 10px 34px var(--shadow); font-family: var(--serif);
+    font-size: 0.88rem; line-height: 1.55; color: var(--text);
+    z-index: 80; pointer-events: none; opacity: 0; transition: opacity 0.12s;
+  }
+  #tooltip.show { opacity: 1; }
+  .tooltip-header {
+    font-family: var(--sans); font-weight: 700; font-size: 0.72rem;
+    text-transform: uppercase; letter-spacing: 0.07em; color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .tooltip-note {
+    margin-top: 6px; font-family: var(--sans); font-size: 0.72rem; color: var(--muted);
+  }
+
+  /* ---------- Preview pane ---------- */
+  #preview-pane {
+    position: fixed; top: 56px; right: 0; bottom: 0; width: min(460px, 92vw);
+    background: var(--bg); border-left: 1px solid var(--border);
+    box-shadow: -10px 0 40px var(--shadow); transform: translateX(105%);
+    transition: transform 0.22s ease; z-index: 22; display: flex; flex-direction: column;
+  }
+  #preview-pane.open { transform: none; }
+  #preview-header {
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; flex-shrink: 0;
+  }
+  #preview-title {
+    font-family: var(--sans); font-weight: 700; font-size: 0.82rem;
+    text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent);
+  }
+  #preview-close {
+    background: none; border: 1px solid var(--border); color: var(--text);
+    border-radius: 6px; width: 32px; height: 32px; font-size: 1.1rem;
+    cursor: pointer; line-height: 1;
+  }
+  #preview-close:hover { border-color: var(--accent); color: var(--accent); }
+  #preview-body {
+    flex: 1; overflow-y: auto; padding: 18px 20px 30px;
+    font-family: var(--serif); font-size: 1rem; line-height: 1.68;
+  }
+  #preview-body .para { margin-bottom: 0.8em; }
+  #preview-body .open-full {
+    display: inline-block; margin-top: 14px; font-family: var(--sans);
+    font-size: 0.82rem; color: var(--accent); text-decoration: none; font-weight: 600;
+  }
+  #preview-body .open-full:hover { text-decoration: underline; }
+  .preview-note {
+    font-family: var(--sans); font-size: 0.78rem; color: var(--muted);
+    margin: 0.4em 0 0.6em;
+  }
+
+  /* ---------- Messages ---------- */
+  .loading, .error {
+    max-width: 640px; margin: 60px auto; padding: 20px;
+    font-family: var(--sans); font-size: 0.95rem; line-height: 1.6;
+  }
+  .error { border: 1px solid var(--border); border-radius: 10px; background: var(--bg-alt); }
+  .error h2 { margin-top: 0; color: var(--accent); font-size: 1.2rem; }
+  .error code { background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+
+  /* ---------- Backdrop ---------- */
+  #backdrop {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 24;
+  }
+  #backdrop.show { display: block; }
+
+  /* ---------- Theme dialog ---------- */
+  .modal {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal[hidden] { display: none; }
+  .modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.45); }
+  .modal-panel {
+    position: relative;
+    width: min(400px, 100%);
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 24px 70px var(--shadow);
+    padding: 16px 20px 20px;
+  }
+  .modal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin-bottom: 4px;
+  }
+  .modal-head h2 {
+    margin: 0; font-family: var(--sans); font-size: 1.02rem; color: var(--accent);
+  }
+  #theme-close {
+    background: none; border: 1px solid var(--border); color: var(--text);
+    border-radius: 7px; width: 30px; height: 30px; font-size: 1.05rem;
+    line-height: 1; cursor: pointer; flex-shrink: 0;
+  }
+  #theme-close:hover { border-color: var(--accent); color: var(--accent); }
+
+  .field { margin-top: 18px; }
+  .field-label, .field > label {
+    display: block; font-family: var(--sans); font-size: 0.72rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .field-controls { display: flex; align-items: center; gap: 10px; }
+  .field-controls input[type="range"] {
+    flex: 1; min-width: 0; accent-color: var(--accent);
+  }
+  .field-controls input[type="number"] {
+    width: 66px; flex-shrink: 0; padding: 6px 8px;
+    font-family: var(--sans); font-size: 0.86rem; text-align: center;
+    color: var(--text); background: var(--bg-alt);
+    border: 1px solid var(--border); border-radius: 7px;
+    outline: none; -moz-appearance: textfield;
+  }
+  .field-controls input[type="number"]::-webkit-outer-spin-button,
+  .field-controls input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none; margin: 0;
+  }
+  .field-controls input[type="number"]:focus {
+    border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft);
+  }
+  .field-hint {
+    margin: 7px 0 0; font-family: var(--sans); font-size: 0.72rem;
+    color: var(--muted); line-height: 1.4;
+  }
+
+  /* Hue slider with rainbow track */
+  #hue-range {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 10px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: linear-gradient(to right,
+      hsl(0, 65%, 50%), hsl(60, 65%, 50%), hsl(120, 65%, 50%),
+      hsl(180, 65%, 50%), hsl(240, 65%, 50%), hsl(300, 65%, 50%), hsl(360, 65%, 50%));
+    outline: none;
+    cursor: pointer;
+  }
+  #hue-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 0 1px var(--border);
+    cursor: pointer;
+  }
+  #hue-range::-moz-range-track {
+    background: transparent; border: none; height: 10px;
+  }
+  #hue-range::-moz-range-thumb {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 0 1px var(--border);
+    cursor: pointer;
+  }
+
+  .swatch {
+    width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%;
+    background: var(--accent); border: 1px solid var(--border);
+  }
+
+  .segmented {
+    display: flex; gap: 4px; padding: 3px;
+    background: var(--bg-alt); border: 1px solid var(--border); border-radius: 9px;
+  }
+  .segmented button {
+    flex: 1; padding: 7px 10px; border: none; background: none;
+    color: var(--muted); font-family: var(--sans); font-size: 0.84rem;
+    border-radius: 6px; cursor: pointer;
+  }
+  .segmented button:hover { color: var(--text); }
+  .segmented button.active {
+    background: var(--bg); color: var(--accent); font-weight: 700;
+    box-shadow: 0 1px 3px var(--shadow);
+  }
+
+  .modal-foot { margin-top: 22px; display: flex; justify-content: flex-end; }
+  .btn-primary {
+    padding: 8px 16px; border-radius: 8px;
+    border: 1px solid var(--accent); background: var(--accent); color: var(--bg);
+    font-family: var(--sans); font-size: 0.86rem; font-weight: 700; cursor: pointer;
+  }
+  .btn-primary:hover { filter: brightness(1.08); }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 860px) {
+    #menu-toggle { display: block; }
+    #brand span { display: none; }
+    #search-wrap { width: min(420px, 52vw); }
+    #sidebar {
+      position: fixed; top: 56px; bottom: 0; left: 0; width: 86vw; max-width: 370px;
+      z-index: 25; transform: translateX(-105%); transition: transform .22s ease;
+      box-shadow: 0 0 40px rgba(0,0,0,.25);
+    }
+    #sidebar.open { transform: none; }
+    #content { padding: 22px 18px 70px; }
+    #pager button { max-width: 38%; font-size: 0.72rem; }
+  }
+  @media (max-width: 520px) {
+    #search-wrap { width: auto; flex: 1; min-width: 0; }
+    #brand { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header id="topbar">
+  <button id="menu-toggle" aria-label="Toggle navigation">☰</button>
+  <div id="brand">Catechism <span>of the Catholic Church</span></div>
+
+  <div id="search-wrap">
+    <input id="search" type="search" placeholder="Search text or CCC §…" autocomplete="off" spellcheck="false" aria-label="Search the Catechism">
+    <div id="search-results" role="listbox"></div>
+  </div>
+
+  <button id="theme-btn" aria-label="Theme settings" aria-haspopup="dialog" aria-controls="theme-modal" title="Theme settings">
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/>
+    </svg>
+  </button>
+</header>
+
+<div id="layout">
+  <nav id="sidebar" aria-label="Table of contents">
+    <div id="tree-container"></div>
+  </nav>
+
+  <main id="content">
+    <div id="page">
+      <div class="loading">Loading the Catechism…</div>
+    </div>
+    <div id="pager">
+      <button id="prev" disabled>← Previous</button>
+      <span id="pager-label"></span>
+      <button id="next" disabled>Next →</button>
+    </div>
+  </main>
+</div>
+
+<aside id="preview-pane" aria-label="Preview">
+  <div id="preview-header">
+    <span id="preview-title"></span>
+    <button id="preview-close" aria-label="Close preview">×</button>
+  </div>
+  <div id="preview-body"></div>
+</aside>
+
+<div id="tooltip" role="tooltip"></div>
+<div id="backdrop"></div>
+
+<!-- Theme dialog -->
+<div id="theme-modal" class="modal" hidden>
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="theme-title">
+    <div class="modal-head">
+      <h2 id="theme-title">Appearance</h2>
+      <button id="theme-close" aria-label="Close">×</button>
+    </div>
+
+    <div class="field">
+      <span class="field-label" id="mode-label">Mode</span>
+      <div class="segmented" role="group" aria-labelledby="mode-label">
+        <button type="button" data-mode="light">Light</button>
+        <button type="button" data-mode="dark">Dark</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="bg-range">Background</label>
+      <div class="field-controls">
+        <input type="range" id="bg-range" min="0" max="100" step="1" value="0">
+        <input type="number" id="bg-number" min="0" max="100" step="1" value="0"
+               inputmode="numeric" aria-label="Background brightness, 0 to 100">
+      </div>
+      <p class="field-hint" id="bg-hint">0 = pure white · 100 = light tint</p>
+    </div>
+
+    <div class="field">
+      <label for="hue-range">Accent hue</label>
+      <div class="field-controls">
+        <input type="range" id="hue-range" min="0" max="360" step="1" value="0">
+        <input type="number" id="hue-number" min="0" max="360" step="1" value="0"
+               inputmode="numeric" aria-label="Accent hue, 0 to 360 degrees">
+        <span id="hue-swatch" class="swatch" aria-hidden="true"></span>
+      </div>
+      <p class="field-hint">0° red · 120° green · 240° blue</p>
+    </div>
+
+    <div class="modal-foot">
+      <button id="theme-done" class="btn-primary">Done</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* =========================================================================
+ *  CONFIG — edit this section
+ * =========================================================================
+ *
+ *  Each data source is loaded in this order:
+ *    1. Inline contents (if you paste them below)
+ *    2. URL (if configured)
+ *    3. File picker (only if the first two fail / are empty)
+ *
+ *  To use inline contents, paste either the parsed JSON object or the raw
+ *  JSON text as a string. Example:
+ *
+ *    const CCC_JSON_INLINE = { "page_nodes": { ... }, "toc_nodes": { ... }, ... };
+ *    const REFS_JSON_INLINE = { "1": { "references": [], "referenced by": [] }, ... };
+ *
+ *  Set either constant to null (or '') to fall through to the URL.
+ * ========================================================================= */
+
+const CCC_JSON_URL  = 'https://raw.githubusercontent.com/Hrjcushghdsj/catechism/refs/heads/main/ccc.json';
+const REFS_JSON_URL = 'https://raw.githubusercontent.com/Hrjcushghdsj/catechism/refs/heads/main/references.json';
+
+const CCC_JSON_INLINE  = null;   // ← paste ccc.json contents here to override
+const REFS_JSON_INLINE = null;   // ← paste references.json contents here to override
+
+/* ------------------------------------------------------------------ *
+ *  Optional explicit cross-reference map.
+ *  Add entries like: 385: [283, 293]
+ *  They are merged with anything detected from the data.
+ * ------------------------------------------------------------------ */
+const EXPLICIT_XREFS = {
+  // 385: [283, 293],
+};
+
+const $ = (sel, root = document) => root.querySelector(sel);
+
+const state = {
+  currentId: null,
+  order: [],
+  pageMap: {},
+  tocMap: {},
+  cccMap: {},
+  backlinks: {},
+  searchData: {},
+  data: null,
+  refsMap: {},          // number -> { references: [{start,end}], referencedBy: [{start,end}] }
+  lastPageOpts: null,
+  // theme
+  themeMode: 'light',
+  contrast: 0,
+  hue: 0,
+};
+
+const els = {};
+let tooltipEl = null;
+let searchTimer = null;
+
+/* ------------------------------------------------------------------ *
+ *  Boot
+ * ------------------------------------------------------------------ */
+document.addEventListener('DOMContentLoaded', init);
+
+async function init() {
+  els.tree         = $('#tree-container');
+  els.page         = $('#page');
+  els.search       = $('#search');
+  els.searchResults = $('#search-results');
+  els.searchWrap   = $('#search-wrap');
+  els.sidebar      = $('#sidebar');
+  els.backdrop     = $('#backdrop');
+  els.menuToggle   = $('#menu-toggle');
+  els.prev         = $('#prev');
+  els.next         = $('#next');
+  els.pagerLabel   = $('#pager-label');
+  els.previewPane  = $('#preview-pane');
+  els.previewTitle = $('#preview-title');
+  els.previewBody  = $('#preview-body');
+
+  // theme dialog
+  els.themeBtn     = $('#theme-btn');
+  els.themeModal   = $('#theme-modal');
+  els.bgRange      = $('#bg-range');
+  els.bgNumber     = $('#bg-number');
+  els.bgHint       = $('#bg-hint');
+  els.hueRange     = $('#hue-range');
+  els.hueNumber    = $('#hue-number');
+  els.modeButtons  = Array.from(document.querySelectorAll('#theme-modal .segmented button'));
+
+  setupTheme();
+  bindUI();
+
+  // ---- Catechism text ----
+  let data = parseMaybeJson(CCC_JSON_INLINE);
+
+  if (!data && CCC_JSON_URL) {
+    try {
+      data = await fetchJson(CCC_JSON_URL);
+    } catch (err) {
+      console.warn('[Catechism] Could not load ccc JSON from URL:', err.message);
+    }
+  }
+
+  if (!data) {
+    showLoadError(new Error(
+      'Could not load the Catechism JSON. ' +
+      (CCC_JSON_INLINE
+        ? 'Inline contents were provided but could not be parsed.'
+        : 'Configure CCC_JSON_INLINE or CCC_JSON_URL in the CONFIG section.')
+    ));
+    return;
+  }
+
+  safeStart(data);
+}
+
+function safeStart(data) {
+  try {
+    startWithData(data);
+  } catch (e) {
+    console.error('[Catechism] Render error:', e);
+    els.page.innerHTML = '';
+    const box = document.createElement('div');
+    box.className = 'error';
+    box.innerHTML = '<h2>Could not display the Catechism</h2>' +
+      '<p>See the browser console for details. The data was loaded, but an error occurred while rendering it.</p>';
+    els.page.appendChild(box);
+  }
+}
+
+function startWithData(data) {
+  state.data = data;
+  buildIndexes();
+  renderTree();
+
+  // Apply inline references immediately (before the first page render)
+  const inlineRefs = parseMaybeJson(REFS_JSON_INLINE);
+  if (inlineRefs) state.refsMap = normalizeRefs(inlineRefs);
+
+  routeInitial();
+
+  if (!inlineRefs) loadRefsInBackground();
+}
+
+/* ------------------------------------------------------------------ *
+ *  Loading helpers
+ * ------------------------------------------------------------------ */
+function parseMaybeJson(value) {
+  if (value == null) return null;
+  if (typeof value === 'string') {
+    const s = value.trim();
+    if (!s) return null;
+    try {
+      return JSON.parse(s);
+    } catch (e) {
+      console.warn('[Catechism] Inline JSON could not be parsed:', e.message);
+      return null;
+    }
+  }
+  if (typeof value === 'object') return value;
+  return null;
+}
+
+async function fetchJson(url) {
+  if (!url) throw new Error('No URL configured');
+  const res = await fetch(url, { cache: 'no-cache' });
+  if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + res.statusText);
+  return res.json();
+}
+
+/* ---- References data ---- */
+async function loadRefsInBackground() {
+  if (REFS_JSON_URL) {
+    try {
+      const raw = await fetchJson(REFS_JSON_URL);
+      applyRefsData(raw);
+      return;
+    } catch (e) {
+      console.warn('[Catechism] Could not load references JSON from URL:', e.message);
+    }
+  }
+  showRefsBanner();
+}
+
+function applyRefsData(raw) {
+  if (!raw || typeof raw !== 'object') return;
+  state.refsMap = normalizeRefs(raw);
+  removeRefsBanner();
+
+  // Re-render the current page so the new reference lines appear.
+  if (state.currentId) {
+    const content = document.getElementById('content');
+    const top = content ? content.scrollTop : 0;
+    const opts = Object.assign({}, state.lastPageOpts || {}, { skipScroll: true });
+    renderPage(state.currentId, opts);
+    if (content) content.scrollTop = top;
+  }
+}
+
+function normalizeRefs(raw) {
+  const map = {};
+  if (!raw || typeof raw !== 'object') return map;
+
+  for (const key of Object.keys(raw)) {
+    const n = toInt(key);
+    if (n == null) continue;
+    const entry = raw[key] || {};
+    map[n] = {
+      references: normalizeEntryList(entry.references),
+      referencedBy: normalizeEntryList(
+        entry['referenced by'] || entry.referenced_by || entry.referencedBy
+      ),
+    };
+  }
+  return map;
+}
+
+function normalizeEntryList(list) {
+  const out = [];
+  if (!Array.isArray(list)) return out;
+
+  for (const item of list) {
+    if (Array.isArray(item)) {
+      // A range: [id_start, id_end]
+      if (item.length >= 2) {
+        const a = toInt(item[0]);
+        const b = toInt(item[1]);
+        if (a != null && b != null) {
+          out.push({ start: Math.min(a, b), end: Math.max(a, b) });
+        }
+      }
+    } else {
+      const n = toInt(item);
+      if (n != null) out.push({ start: n, end: n });
+    }
+  }
+  return out;
+}
+
+function toInt(v) {
+  if (typeof v === 'number' && Number.isFinite(v)) return Math.trunc(v);
+  if (typeof v === 'string' && /^\d+$/.test(v.trim())) return parseInt(v, 10);
+  return null;
+}
+
+/* ---- References banner (offers manual file selection) ---- */
+function showRefsBanner() {
+  if (document.getElementById('refs-banner')) return;
+
+  const banner = document.createElement('div');
+  banner.id = 'refs-banner';
+
+  const msg = document.createElement('span');
+  msg.innerHTML = 'Cross-reference data (<code>references.json</code>) is not loaded. ' +
+                  'Paragraph cross-links are unavailable.';
+  banner.appendChild(msg);
+
+  const label = document.createElement('label');
+  label.className = 'refs-btn';
+  label.textContent = 'Select references.json';
+
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,application/json';
+  input.addEventListener('change', () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      let raw;
+      try {
+        raw = JSON.parse(reader.result);
+      } catch (e) {
+        alert('That file is not valid JSON: ' + e.message);
+        return;
+      }
+      applyRefsData(raw);
+    };
+    reader.readAsText(file);
+  });
+
+  label.appendChild(input);
+  banner.appendChild(label);
+
+  const content = document.getElementById('content');
+  if (content) content.insertBefore(banner, content.firstChild);
+}
+
+function removeRefsBanner() {
+  const b = document.getElementById('refs-banner');
+  if (b) b.remove();
+}
+
+/* ---- Catechism load error (offers manual file selection) ---- */
+function showLoadError(err) {
+  els.page.innerHTML = '';
+  const box = document.createElement('div');
+  box.className = 'error';
+  box.innerHTML = `
+    <h2>Could not load the Catechism</h2>
+    <p>${escapeHtml(String(err && err.message ? err.message : err))}</p>
+    <p>Set <code>CCC_JSON_INLINE</code> or <code>CCC_JSON_URL</code> at the top of the
+       script, or select the file manually:</p>
+  `;
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,application/json';
+  input.addEventListener('change', () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      let data;
+      try {
+        data = JSON.parse(reader.result);
+      } catch (e) {
+        alert('That file is not valid JSON: ' + e.message);
+        return;
+      }
+      safeStart(data);
+    };
+    reader.readAsText(file);
+  });
+  box.appendChild(input);
+  els.page.appendChild(box);
+}
+
+/* ------------------------------------------------------------------ *
+ *  Indexing
+ * ------------------------------------------------------------------ */
+function buildIndexes() {
+  const data = state.data;
+  state.pageMap = data.page_nodes || {};
+  state.tocMap = data.toc_nodes || {};
+  state.order = [];
+  state.cccMap = {};
+  state.backlinks = {};
+  state.searchData = {};
+
+  const walk = (nodes) => {
+    if (!nodes) return;
+    for (const n of nodes) {
+      if (state.pageMap[n.id]) state.order.push(n.id);
+      walk(n.children);
+    }
+  };
+  walk(data.toc_link_tree);
+
+  const seen = new Set(state.order);
+  for (const id in state.pageMap) {
+    if (!seen.has(id)) state.order.push(id);
+  }
+
+  for (const id of state.order) {
+    const page = state.pageMap[id];
+    const paras = [];
+
+    (page.paragraphs || []).forEach((p, pi) => {
+      let text = '';
+      let firstCcc = null;
+
+      for (const el of (p.elements || [])) {
+        if (el.type === 'text') text += el.text;
+        else if (el.type === 'ref-ccc' && firstCcc === null) firstCcc = el.ref_number;
+      }
+
+      text = text.trim();
+      if (text) paras.push({ lower: text.toLowerCase(), idx: pi, text });
+
+      if (firstCcc !== null && state.cccMap[firstCcc] === undefined) {
+        state.cccMap[firstCcc] = { pageId: id, paraIndex: pi };
+      }
+    });
+
+    state.searchData[id] = paras;
+  }
+
+  for (const id of state.order) {
+    const page = state.pageMap[id];
+    (page.paragraphs || []).forEach(p => {
+      for (const el of (p.elements || [])) {
+        if (el.type !== 'ref-ccc') continue;
+        const target = state.cccMap[el.ref_number];
+        if (target && target.pageId !== id) {
+          if (!state.backlinks[target.pageId]) state.backlinks[target.pageId] = new Set();
+          state.backlinks[target.pageId].add(id);
+        }
+      }
+    });
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ *  Cross-reference helpers
+ * ------------------------------------------------------------------ */
+
+/** The paragraph's own CCC number (its first ref-ccc element). */
+function getParaNumber(para) {
+  const els = para && para.elements;
+  if (!Array.isArray(els)) return null;
+  for (const el of els) {
+    if (el && el.type === 'ref-ccc' && typeof el.ref_number === 'number') {
+      return el.ref_number;
+    }
+  }
+  return null;
+}
+
+/** References for one paragraph: references.json entries + auto-detected ones. */
+function collectReferencesFor(ownNum, page, para) {
+  const out = [];
+  const covered = (n) => out.some(e => n >= e.start && n <= e.end);
+
+  // 1. references.json is the primary source
+  if (ownNum != null && state.refsMap[ownNum]) {
+    for (const e of state.refsMap[ownNum].references) {
+      if (e.start === ownNum && e.end === ownNum) continue;
+      out.push(e);
+    }
+  }
+
+  // 2. Fallback / augmentation from ccc.json
+  const auto = extractCrossReferences(page, para);
+  for (const n of auto) {
+    if (n === ownNum) continue;
+    if (covered(n)) continue;
+    out.push({ start: n, end: n });
+  }
+
+  return out;
+}
+
+/** Paragraphs that reference this one (from references.json). */
+function getReferencedBy(ownNum) {
+  if (ownNum == null) return [];
+  const data = state.refsMap[ownNum];
+  if (!data) return [];
+  return data.referencedBy.filter(e => !(e.start === ownNum && e.end === ownNum));
+}
+
+function extractCrossReferences(page, para) {
+  const refs = new Set();
+  const elements = Array.isArray(para.elements) ? para.elements : [];
+  const ownNumber = elements[0] && elements[0].type === 'ref-ccc'
+    ? elements[0].ref_number : null;
+
+  // 1. Explicit mapping supplied by the caller
+  if (ownNumber != null && Array.isArray(EXPLICIT_XREFS[ownNumber])) {
+    EXPLICIT_XREFS[ownNumber].forEach(n => {
+      if (state.cccMap[n]) refs.add(n);
+    });
+  }
+
+  // 2. A `cross_references` array on the paragraph object
+  if (Array.isArray(para.cross_references)) {
+    para.cross_references.forEach(n => {
+      if (state.cccMap[n]) refs.add(n);
+    });
+  }
+
+  // 3. Additional ref-ccc elements beyond the first (the first is the own number)
+  let seenCcc = 0;
+  for (const el of elements) {
+    if (el.type === 'ref-ccc') {
+      seenCcc++;
+      if (seenCcc > 1 && state.cccMap[el.ref_number] &&
+          el.ref_number !== ownNumber) {
+        refs.add(el.ref_number);
+      }
+    }
+  }
+
+  // 4. §N patterns in the paragraph's own text
+  for (const el of elements) {
+    if (el.type !== 'text' || !el.text) continue;
+    scanForSectionRefs(el.text, ownNumber, refs);
+  }
+
+  // 5. §N patterns in the footnotes attached to this paragraph
+  const footnotes = page.footnotes || {};
+  for (const el of elements) {
+    if (el.type !== 'ref') continue;
+    const fn = footnotes[el.number];
+    if (!fn) continue;
+    for (const r of (fn.refs || [])) {
+      if (r.text) scanForSectionRefs(r.text, ownNumber, refs);
+    }
+  }
+
+  return Array.from(refs).sort((a, b) => a - b);
+}
+
+function scanForSectionRefs(text, ownNumber, refs) {
+  const re = /§\s*(\d{1,4})/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const n = parseInt(m[1], 10);
+    if (n !== ownNumber && state.cccMap[n]) refs.add(n);
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ *  Tree
+ * ------------------------------------------------------------------ */
+function renderTree() {
+  els.tree.innerHTML = '';
+  const root = buildTree(state.data.toc_link_tree || []);
+  els.tree.appendChild(root);
+  for (const li of root.children) li.classList.remove('collapsed');
+}
+
+function buildTree(nodes) {
+  const ul = document.createElement('ul');
+  ul.className = 'tree';
+
+  for (const n of nodes) {
+    const li = document.createElement('li');
+    li.dataset.id = n.id;
+
+    const hasChildren = !!(n.children && n.children.length);
+    if (hasChildren) li.classList.add('collapsed');
+
+    const row = document.createElement('div');
+    row.className = 'tree-row';
+
+    const toggle = document.createElement('span');
+    toggle.className = 'toggle';
+    toggle.textContent = '▸';
+    if (!hasChildren) toggle.style.visibility = 'hidden';
+    row.appendChild(toggle);
+
+    const label = document.createElement('span');
+    label.className = 'tree-label';
+    const toc = state.tocMap[n.id];
+    label.textContent = toc ? toc.text : n.id;
+    row.appendChild(label);
+
+    if (state.pageMap[n.id]) row.classList.add('has-page');
+
+    toggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (hasChildren) li.classList.toggle('collapsed');
+    });
+
+    row.addEventListener('click', () => {
+      if (state.pageMap[n.id]) navigate(n.id);
+      else if (hasChildren) li.classList.toggle('collapsed');
+    });
+
+    li.appendChild(row);
+    if (hasChildren) li.appendChild(buildTree(n.children));
+    ul.appendChild(li);
+  }
+
+  return ul;
+}
+
+function updateActiveTree() {
+  document.querySelectorAll('.tree-row.active').forEach(r => r.classList.remove('active'));
+  if (!state.currentId) return;
+
+  const li = document.querySelector(`li[data-id="${cssEscape(state.currentId)}"]`);
+  if (!li) return;
+
+  const row = li.querySelector(':scope > .tree-row');
+  if (row) {
+    row.classList.add('active');
+    row.scrollIntoView({ block: 'nearest' });
+  }
+
+  let p = li.parentElement;
+  while (p && p.id !== 'tree-container') {
+    if (p.tagName === 'LI') p.classList.remove('collapsed');
+    p = p.parentElement;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ *  Navigation
+ * ------------------------------------------------------------------ */
+function navigate(id, opts = {}) {
+  if (!state.pageMap[id]) return;
+
+  closePreview();
+  hideTooltip();
+
+  state.currentId = id;
+  renderPage(id, opts);
+  updateActiveTree();
+  updatePager();
+
+  if (!opts.silentHash) {
+    try { history.pushState({ id }, '', '#/' + id); } catch (e) { /* ignore */ }
+  }
+
+  const content = document.getElementById('content');
+  if (content) content.scrollTop = 0;
+
+  document.title = (state.tocMap[id] ? state.tocMap[id].text : id) + ' — Catechism';
+  if (window.innerWidth <= 860) closeSidebar();
+}
+
+/** Navigate to a reference entry (single number or range). */
+function navigateToEntry(entry) {
+  const t = state.cccMap[entry.start];
+  if (!t) return;
+  if (entry.start === entry.end) {
+    navigate(t.pageId, { highlightCcc: entry.start });
+  } else {
+    navigate(t.pageId, { highlightRange: entry });
+  }
+}
+
+function updatePager() {
+  if (!els.prev || !els.next || !els.pagerLabel) return;
+
+  const i = state.order.indexOf(state.currentId);
+  if (i < 0) {
+    els.prev.disabled = true;
+    els.next.disabled = true;
+    els.pagerLabel.textContent = '';
+    return;
+  }
+
+  const prevId = i > 0 ? state.order[i - 1] : null;
+  const nextId = i < state.order.length - 1 ? state.order[i + 1] : null;
+
+  els.prev.disabled = !prevId;
+  els.next.disabled = !nextId;
+
+  els.prev.textContent = prevId ? '← ' + truncate(labelFor(prevId), 34) : '← Previous';
+  els.next.textContent = nextId ? truncate(labelFor(nextId), 34) + ' →' : 'Next →';
+
+  els.pagerLabel.textContent = `${i + 1} / ${state.order.length}`;
+
+  els.prev.onclick = () => { if (prevId) navigate(prevId); };
+  els.next.onclick = () => { if (nextId) navigate(nextId); };
+}
+
+function labelFor(id) {
+  const t = state.tocMap[id];
+  return t ? t.text : id;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Page rendering
+ * ------------------------------------------------------------------ */
+function renderPage(id, opts = {}) {
+  state.lastPageOpts = Object.assign({}, opts);
+
+  const page = state.pageMap[id];
+  const toc = state.tocMap[id];
+  const frag = document.createDocumentFragment();
+
+  const header = document.createElement('div');
+  header.className = 'page-header';
+  const h2 = document.createElement('h2');
+  h2.textContent = toc ? toc.text : id;
+  header.appendChild(h2);
+  frag.appendChild(header);
+
+  let highlightIndex = -1;
+  if (opts.highlightCcc != null) {
+    const t = state.cccMap[opts.highlightCcc];
+    if (t && t.pageId === id) highlightIndex = t.paraIndex;
+  }
+  if (opts.paraIndex != null) highlightIndex = opts.paraIndex;
+
+  const highlightRange = opts.highlightRange || null;
+
+  const body = document.createElement('div');
+  body.className = 'page-body';
+
+  (page.paragraphs || []).forEach((p, pi) => {
+    const pEl = document.createElement('p');
+    pEl.className = 'para';
+
+    if (p.attrs && p.attrs.indent) pEl.classList.add('indent');
+
+    const meaningful = (p.elements || []).filter(e => e.type !== 'spacer');
+    const isHeading = meaningful.length > 0 && meaningful.every(e =>
+      e.type === 'text' && e.attrs && e.attrs.heavy_header
+    );
+    const isSubheading = !isHeading && meaningful.length > 0 && meaningful.every(e =>
+      e.type === 'text' && e.attrs && e.attrs.b
+    );
+
+    if (isHeading) pEl.classList.add('heading');
+    else if (isSubheading) pEl.classList.add('subheading');
+
+    let onlySpacers = true;
+    for (const el of (p.elements || [])) {
+      if (el.type !== 'spacer') onlySpacers = false;
+      pEl.appendChild(renderElement(el, page, id));
+    }
+
+    if (onlySpacers) pEl.classList.add('blank');
+
+    // Highlighting
+    if (pi === highlightIndex) pEl.classList.add('highlight');
+    if (highlightRange) {
+      const n = getParaNumber(p);
+      if (n != null && n >= highlightRange.start && n <= highlightRange.end) {
+        pEl.classList.add('highlight');
+      }
+    }
+
+    body.appendChild(pEl);
+
+    // Cross-reference lines (references.json + auto-detected)
+    if (!isHeading && !onlySpacers) {
+      const ownNum = getParaNumber(p);
+
+      const refEntries = collectReferencesFor(ownNum, page, p);
+      if (refEntries.length) {
+        body.appendChild(renderXrefLine(refEntries, 'References:', 'refs'));
+      }
+
+      const backEntries = getReferencedBy(ownNum);
+      if (backEntries.length) {
+        body.appendChild(renderXrefLine(backEntries, 'Referenced by:', 'back'));
+      }
+    }
+  });
+
+  frag.appendChild(body);
+
+  // Footnotes
+  const footnotes = page.footnotes || {};
+  const fnKeys = Object.keys(footnotes);
+  if (fnKeys.length) {
+    const sec = document.createElement('div');
+    sec.className = 'footnotes';
+
+    const h3 = document.createElement('h3');
+    h3.textContent = 'Footnotes';
+    sec.appendChild(h3);
+
+    const ol = document.createElement('ol');
+    for (const key of fnKeys) {
+      const fn = footnotes[key];
+      const li = document.createElement('li');
+      li.id = `fn-${id}-${fn.number}`;
+
+      const num = document.createElement('span');
+      num.className = 'fn-num';
+      num.textContent = fn.number + '. ';
+      li.appendChild(num);
+
+      (fn.refs || []).forEach((r, i) => {
+        if (i) li.appendChild(document.createTextNode(' '));
+        if (r.link) {
+          const a = document.createElement('a');
+          a.href = r.link;
+          a.target = '_blank';
+          a.rel = 'noopener';
+          a.textContent = r.text;
+          li.appendChild(a);
+        } else {
+          li.appendChild(document.createTextNode(r.text || ''));
+        }
+      });
+
+      ol.appendChild(li);
+    }
+    sec.appendChild(ol);
+    frag.appendChild(sec);
+  }
+
+  // Legacy page-level backlinks — only used when references.json is unavailable
+  const refsLoaded = Object.keys(state.refsMap).length > 0;
+  if (!refsLoaded) {
+    const back = state.backlinks[id];
+    if (back && back.size) {
+      const sec = document.createElement('div');
+      sec.className = 'backlinks';
+
+      const h3 = document.createElement('h3');
+      h3.textContent = 'Referenced by';
+      sec.appendChild(h3);
+
+      const ul = document.createElement('ul');
+      for (const src of back) {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = '#/' + src;
+        a.textContent = labelFor(src);
+        a.addEventListener('click', (e) => { e.preventDefault(); navigate(src); });
+        li.appendChild(a);
+        ul.appendChild(li);
+      }
+      sec.appendChild(ul);
+      frag.appendChild(sec);
+    }
+  }
+
+  els.page.innerHTML = '';
+  els.page.appendChild(frag);
+
+  if (!opts.skipScroll && (highlightIndex >= 0 || highlightRange)) {
+    setTimeout(() => {
+      const target = els.page.querySelector('.para.highlight');
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 40);
+  }
+}
+
+/**
+ * Render a cross-reference line.
+ *   kind === 'refs' → clicking opens the referenced paragraph
+ *   kind === 'back' → clicking previews the referencing paragraph ("probe")
+ */
+function renderXrefLine(entries, label, kind) {
+  const div = document.createElement('div');
+  div.className = 'see-also ' + (kind || '');
+
+  const lab = document.createElement('span');
+  lab.className = 'xref-label';
+  lab.textContent = label + ' ';
+  div.appendChild(lab);
+
+  entries.forEach((entry, i) => {
+    if (i) div.appendChild(document.createTextNode(', '));
+
+    const target = state.cccMap[entry.start];
+    const text = entry.start === entry.end
+      ? String(entry.start)
+      : entry.start + '–' + entry.end;
+
+    if (!target) {
+      const span = document.createElement('span');
+      span.className = 'xref-missing';
+      span.textContent = text;
+      span.title = 'Paragraph not found in the loaded Catechism';
+      div.appendChild(span);
+      return;
+    }
+
+    const a = document.createElement('a');
+    a.href = '#ccc-' + entry.start;
+    a.textContent = text;
+    a.title = (kind === 'back' ? 'Preview CCC ' : 'Go to CCC ') + text;
+
+    a.addEventListener('mouseenter', () => showTooltip(a, entry));
+    a.addEventListener('mouseleave', hideTooltip);
+    a.addEventListener('focus', () => showTooltip(a, entry));
+    a.addEventListener('blur', hideTooltip);
+
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      hideTooltip();
+      if (kind === 'back') {
+        openPreview(entry);
+      } else {
+        navigateToEntry(entry);
+      }
+    });
+
+    div.appendChild(a);
+  });
+
+  return div;
+}
+
+function renderElement(el, page, pageId) {
+  switch (el.type) {
+    case 'text': {
+      const span = document.createElement('span');
+      span.textContent = el.text;
+      const a = el.attrs || {};
+      if (a.b) span.classList.add('bold');
+      if (a.i) span.classList.add('italic');
+      if (a.heavy_header) span.classList.add('heavy');
+      return span;
+    }
+    case 'spacer':
+      return document.createElement('br');
+    case 'ref': {
+      const sup = document.createElement('sup');
+      sup.className = 'fn-ref';
+      sup.textContent = el.number;
+
+      // Accessibility: aria-label is not a visual tooltip, so it's safe.
+      sup.setAttribute('aria-label', 'Footnote ' + el.number);
+
+      // Resolve the footnote for this paragraph/page.
+      const footnote = (page.footnotes || {})[el.number];
+
+      const showFnTip = () => {
+        if (footnote) showFootnoteTooltip(sup, footnote);
+      };
+
+      sup.addEventListener('mouseenter', showFnTip);
+      sup.addEventListener('mouseleave', hideTooltip);
+      sup.addEventListener('focus', showFnTip);
+      sup.addEventListener('blur', hideTooltip);
+
+      sup.addEventListener('click', () => {
+        hideTooltip();
+        const target = document.getElementById(`fn-${pageId}-${el.number}`);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          target.classList.add('flash');
+          setTimeout(() => target.classList.remove('flash'), 1800);
+        }
+      });
+
+      return sup;
+    }
+    case 'ref-ccc': {
+      const a = document.createElement('a');
+      a.className = 'ccc-ref';
+      a.href = 'javascript:void(0)';
+      a.textContent = el.ref_number;
+      a.title = 'Go to CCC ' + el.ref_number;
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        const t = state.cccMap[el.ref_number];
+        if (t) navigate(t.pageId, { highlightCcc: el.ref_number });
+      });
+      return a;
+    }
+    case 'ref-anchor': {
+      const a = document.createElement('a');
+      a.className = 'anchor-ref';
+      a.href = el.link || '#';
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.textContent = '↗';
+      a.title = 'Open referenced text';
+      return a;
+    }
+    default:
+      return document.createTextNode('');
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ *  Tooltip preview
+ * ------------------------------------------------------------------ */
+function ensureTooltip() {
+  if (!tooltipEl) {
+    tooltipEl = $('#tooltip');
+  }
+  return tooltipEl;
+}
+
+function entryLabel(entry) {
+  return entry.start === entry.end
+    ? 'CCC ' + entry.start
+    : 'CCC ' + entry.start + '–' + entry.end;
+}
+
+function showTooltip(anchor, entry) {
+  const target = state.cccMap[entry.start];
+  if (!target) return;
+  const page = state.pageMap[target.pageId];
+  const para = page.paragraphs[target.paraIndex];
+  if (!para) return;
+
+  const tip = ensureTooltip();
+  tip.innerHTML = '';
+
+  const header = document.createElement('div');
+  header.className = 'tooltip-header';
+  header.textContent = entryLabel(entry);
+  tip.appendChild(header);
+
+  const body = document.createElement('div');
+  body.textContent = truncate(extractPlainText(para), 300);
+  tip.appendChild(body);
+
+  if (entry.start !== entry.end) {
+    const note = document.createElement('div');
+    note.className = 'tooltip-note';
+    note.textContent = 'Range — showing the first paragraph.';
+    tip.appendChild(note);
+  }
+
+  tip.classList.add('show');
+  positionTooltip(anchor);
+}
+
+/** Show a footnote's text in the shared tooltip. */
+function showFootnoteTooltip(anchor, footnote) {
+  const tip = ensureTooltip();
+  tip.innerHTML = '';
+
+  const header = document.createElement('div');
+  header.className = 'tooltip-header';
+  header.textContent = 'Footnote ' + footnote.number;
+  tip.appendChild(header);
+
+  const body = document.createElement('div');
+  const text = (footnote.refs || [])
+    .map(r => (r && r.text) ? r.text : '')
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  body.textContent = truncate(text, 400);
+  tip.appendChild(body);
+
+  tip.classList.add('show');
+  positionTooltip(anchor);
+}
+
+function positionTooltip(anchor) {
+  if (!tooltipEl) return;
+  const rect = anchor.getBoundingClientRect();
+  const tip = tooltipEl;
+  tip.style.visibility = 'hidden';
+  tip.style.left = '0px';
+  tip.style.top = '0px';
+  const tr = tip.getBoundingClientRect();
+  let left = rect.left;
+  let top = rect.bottom + 6;
+  if (left + tr.width > window.innerWidth - 10) left = window.innerWidth - tr.width - 10;
+  if (left < 10) left = 10;
+  if (top + tr.height > window.innerHeight - 10) {
+    top = rect.top - tr.height - 6;
+    if (top < 10) top = 10;
+  }
+  tip.style.left = left + 'px';
+  tip.style.top = top + 'px';
+  tip.style.visibility = '';
+}
+
+function hideTooltip() {
+  if (tooltipEl) tooltipEl.classList.remove('show');
+}
+
+function extractPlainText(para) {
+  return (para.elements || [])
+    .filter(el => el.type === 'text')
+    .map(el => el.text)
+    .join('')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/* ------------------------------------------------------------------ *
+ *  Right-hand preview pane
+ * ------------------------------------------------------------------ */
+function openPreview(entry) {
+  const target = state.cccMap[entry.start];
+  if (!target) return;
+  const page = state.pageMap[target.pageId];
+  const para = page.paragraphs[target.paraIndex];
+  if (!para) return;
+
+  els.previewTitle.textContent = entryLabel(entry);
+  els.previewBody.innerHTML = '';
+
+  els.previewBody.appendChild(renderPreviewParagraph(para, page));
+
+  if (entry.start !== entry.end) {
+    const note = document.createElement('p');
+    note.className = 'preview-note';
+    note.textContent = 'Showing the first paragraph of this range.';
+    els.previewBody.appendChild(note);
+  }
+
+  const open = document.createElement('a');
+  open.href = '#ccc-' + entry.start;
+  open.className = 'open-full';
+  open.textContent = 'Open in context →';
+  open.addEventListener('click', (e) => {
+    e.preventDefault();
+    closePreview();
+    navigateToEntry(entry);
+  });
+  els.previewBody.appendChild(open);
+
+  els.previewPane.classList.add('open');
+  els.previewBody.scrollTop = 0;
+}
+
+function closePreview() {
+  if (els.previewPane) els.previewPane.classList.remove('open');
+}
+
+function renderPreviewParagraph(para, page) {
+  const pEl = document.createElement('p');
+  pEl.className = 'para';
+  if (para.attrs && para.attrs.indent) pEl.classList.add('indent');
+
+  const elements = Array.isArray(para.elements) ? para.elements : [];
+  let start = 0;
+  if (elements[0] && elements[0].type === 'ref-ccc') start = 1;
+
+  for (let i = start; i < elements.length; i++) {
+    const el = elements[i];
+    if (el.type === 'ref') continue;      // skip footnote markers in preview
+    pEl.appendChild(renderElement(el, page, page.id));
+  }
+  return pEl;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Search
+ * ------------------------------------------------------------------ */
+function onSearchInput() {
+  const q = els.search.value.trim();
+  clearTimeout(searchTimer);
+  if (!q) { closeSearch(); return; }
+  searchTimer = setTimeout(() => performSearch(q), 110);
+}
+
+function performSearch(q) {
+  const results = [];
+  const ql = q.toLowerCase();
+  const MAX = 60;
+
+  if (/^\d+$/.test(q)) {
+    const n = parseInt(q, 10);
+    if (state.cccMap[n]) {
+      results.push({
+        type: 'ccc', ccc: n,
+        pageId: state.cccMap[n].pageId,
+        paraIndex: state.cccMap[n].paraIndex,
+      });
+    }
+  }
+
+  outer:
+  for (const id of state.order) {
+    const paras = state.searchData[id] || [];
+    for (const p of paras) {
+      const idx = p.lower.indexOf(ql);
+      if (idx >= 0) {
+        results.push({
+          type: 'text', pageId: id, paraIndex: p.idx,
+          snippet: makeSnippet(p.text, idx, ql.length),
+        });
+        if (results.length >= MAX) break outer;
+      }
+    }
+  }
+
+  renderSearchResults(results, q);
+}
+
+function renderSearchResults(results, q) {
+  const box = els.searchResults;
+  box.innerHTML = '';
+
+  if (!results.length) {
+    const empty = document.createElement('div');
+    empty.className = 'sr-empty';
+    empty.textContent = 'No results for “' + q + '”.';
+    box.appendChild(empty);
+    box.classList.add('open');
+    return;
+  }
+
+  const header = document.createElement('div');
+  header.className = 'sr-header';
+  header.textContent = results.length + (results.length >= 60 ? '+' : '') +
+    ' result' + (results.length === 1 ? '' : 's');
+  box.appendChild(header);
+
+  for (const r of results) {
+    const item = document.createElement('div');
+    item.className = 'sr-item';
+    item.setAttribute('role', 'option');
+
+    const title = document.createElement('div');
+    title.className = 'sr-title';
+    title.textContent = labelFor(r.pageId);
+    item.appendChild(title);
+
+    const snippet = document.createElement('div');
+    snippet.className = 'sr-snippet';
+    if (r.type === 'ccc') {
+      snippet.textContent = 'CCC paragraph ' + r.ccc;
+    } else {
+      snippet.innerHTML = r.snippet;
+    }
+    item.appendChild(snippet);
+
+    item.addEventListener('click', () => {
+      closeSearch();
+      els.search.value = '';
+      navigate(r.pageId, { paraIndex: r.paraIndex });
+    });
+
+    box.appendChild(item);
+  }
+
+  box.classList.add('open');
+}
+
+function makeSnippet(text, idx, len) {
+  const start = Math.max(0, idx - 55);
+  const end = Math.min(text.length, idx + len + 75);
+  return (start > 0 ? '…' : '') +
+    escapeHtml(text.slice(start, idx)) +
+    '<mark>' + escapeHtml(text.slice(idx, idx + len)) + '</mark>' +
+    escapeHtml(text.slice(idx + len, end)) +
+    (end < text.length ? '…' : '');
+}
+
+function closeSearch() {
+  els.searchResults.classList.remove('open');
+}
+
+/* ------------------------------------------------------------------ *
+ *  UI events
+ * ------------------------------------------------------------------ */
+function bindUI() {
+  els.search.addEventListener('input', onSearchInput);
+
+  els.search.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const first = els.searchResults.querySelector('.sr-item');
+      if (first) { e.preventDefault(); first.click(); }
+    } else if (e.key === 'Escape') {
+      els.search.value = '';
+      closeSearch();
+      els.search.blur();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!els.searchWrap.contains(e.target)) closeSearch();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === '/' && !isTypingTarget(e.target)) {
+      e.preventDefault();
+      els.search.focus();
+      els.search.select();
+    }
+    if (e.key === 'Escape') {
+      if (els.themeModal && !els.themeModal.hidden) {
+        closeThemeDialog();
+        return;
+      }
+      hideTooltip();
+      closePreview();
+    }
+  });
+
+  els.menuToggle.addEventListener('click', () => {
+    els.sidebar.classList.toggle('open');
+    els.backdrop.classList.toggle('show', els.sidebar.classList.contains('open'));
+  });
+
+  els.backdrop.addEventListener('click', closeSidebar);
+
+  /* ---- Theme dialog ---- */
+  els.themeBtn.addEventListener('click', openThemeDialog);
+  $('#theme-close').addEventListener('click', closeThemeDialog);
+  $('#theme-done').addEventListener('click', closeThemeDialog);
+  els.themeModal.querySelector('.modal-backdrop').addEventListener('click', closeThemeDialog);
+
+  els.modeButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (state.themeMode === btn.dataset.mode) return;
+      state.themeMode = btn.dataset.mode;
+      applyTheme();
+    });
+  });
+
+  els.bgRange.addEventListener('input', onBgSlider);
+  els.bgNumber.addEventListener('input', onBgNumberInput);
+  els.bgNumber.addEventListener('change', onBgNumberCommit);
+  els.bgNumber.addEventListener('blur', onBgNumberCommit);
+
+  els.hueRange.addEventListener('input', onHueSlider);
+  els.hueNumber.addEventListener('input', onHueNumberInput);
+  els.hueNumber.addEventListener('change', onHueNumberCommit);
+  els.hueNumber.addEventListener('blur', onHueNumberCommit);
+
+  /* ---- Preview ---- */
+  $('#preview-close').addEventListener('click', closePreview);
+
+  window.addEventListener('popstate', (e) => {
+    const id = (e.state && e.state.id) || parseHashId();
+    if (id && state.pageMap[id] && id !== state.currentId) {
+      navigate(id, { silentHash: true });
+    }
+  });
+
+  window.addEventListener('scroll', hideTooltip, { passive: true });
+}
+
+function closeSidebar() {
+  els.sidebar.classList.remove('open');
+  els.backdrop.classList.remove('show');
+}
+
+function isTypingTarget(el) {
+  if (!el) return false;
+  const tag = el.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Hash routing
+ * ------------------------------------------------------------------ */
+function routeInitial() {
+  const hash = location.hash;
+
+  let m = hash.match(/^#\/(.+)$/);
+  if (m && state.pageMap[m[1]]) {
+    navigate(m[1], { silentHash: true });
+    replaceHash(m[1]);
+    return;
+  }
+
+  m = hash.match(/^#ccc-(\d+)$/);
+  if (m) {
+    const n = parseInt(m[1], 10);
+    const t = state.cccMap[n];
+    if (t) {
+      navigate(t.pageId, { highlightCcc: n, silentHash: true });
+      replaceHash(t.pageId);
+      return;
+    }
+  }
+
+  if (state.order.length) {
+    navigate(state.order[0], { silentHash: true });
+    replaceHash(state.order[0]);
+  }
+}
+
+function parseHashId() {
+  const m = location.hash.match(/^#\/(.+)$/);
+  return m ? m[1] : null;
+}
+
+function replaceHash(id) {
+  try { history.replaceState({ id }, '', '#/' + id); } catch (e) { /* ignore */ }
+}
+
+/* ------------------------------------------------------------------ *
+ *  Theme
+ * ------------------------------------------------------------------ */
+const THEME_KEY    = 'ccc-theme';
+const CONTRAST_KEY = 'ccc-contrast';
+const HUE_KEY      = 'ccc-hue';
+
+function clampNum(n, lo, hi) { return Math.min(hi, Math.max(lo, n)); }
+function clampByte(n) { return Math.min(255, Math.max(0, n)); }
+
+function readInt(input) {
+  if (!input) return null;
+  const raw = String(input.value).trim();
+  if (!raw || !/^[+-]?\d+$/.test(raw)) return null;
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+function setupTheme() {
+  const savedMode = localStorage.getItem(THEME_KEY);
+  const prefersDark = window.matchMedia &&
+    window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+  state.themeMode = (savedMode === 'light' || savedMode === 'dark')
+    ? savedMode
+    : (prefersDark ? 'dark' : 'light');
+
+  const savedContrast = parseInt(localStorage.getItem(CONTRAST_KEY), 10);
+  state.contrast = Number.isFinite(savedContrast)
+    ? clampNum(savedContrast, 0, 100) : 0;
+
+  const savedHue = parseInt(localStorage.getItem(HUE_KEY), 10);
+  state.hue = Number.isFinite(savedHue) ? clampNum(savedHue, 0, 360) : 0;
+
+  applyTheme();
+}
+
+function applyTheme() {
+  const root = document.documentElement;
+  const dark = state.themeMode === 'dark';
+  root.dataset.theme = state.themeMode;
+
+  const t = state.contrast / 100;
+  let bg, alt, side;
+
+  if (dark) {
+    // 0 = fully black, 100 = dark grey
+    const v = Math.round(t * 58);                 // 0 → #000000, 100 → #3a3a3a
+    const a = Math.min(255, v + 16);
+    bg   = `rgb(${v}, ${v}, ${v})`;
+    alt  = `rgb(${a}, ${a}, ${a})`;
+    side = alt;
+  } else {
+    // 0 = pure white, 100 = light warm tint
+    const r = Math.round(255 - t * 14);           // 255 → 241
+    const g = Math.round(255 - t * 20);           // 255 → 235
+    const b = Math.round(255 - t * 34);           // 255 → 221
+    bg   = `rgb(${r}, ${g}, ${b})`;
+    side = `rgb(${clampByte(r - 4)}, ${clampByte(g - 6)}, ${clampByte(b - 13)})`;
+    alt  = `rgb(${clampByte(r - 9)}, ${clampByte(g - 11)}, ${clampByte(b - 18)})`;
+  }
+
+  const h = state.hue;
+  const style = root.style;
+  style.setProperty('--bg', bg);
+  style.setProperty('--bg-alt', alt);
+  style.setProperty('--sidebar-bg', side);
+  style.setProperty('--accent', dark ? `hsl(${h}, 53%, 74%)` : `hsl(${h}, 60%, 30%)`);
+  style.setProperty('--accent-soft', dark ? `hsl(${h}, 18%, 17%)` : `hsl(${h}, 32%, 92%)`);
+
+  try {
+    localStorage.setItem(THEME_KEY, state.themeMode);
+    localStorage.setItem(CONTRAST_KEY, String(state.contrast));
+    localStorage.setItem(HUE_KEY, String(state.hue));
+  } catch (e) { /* storage may be unavailable */ }
+
+  syncThemeControls();
+}
+
+function syncThemeControls() {
+  if (!els.bgRange) return;
+
+  els.bgRange.value = state.contrast;
+  els.hueRange.value = state.hue;
+  els.bgNumber.value = state.contrast;
+  els.hueNumber.value = state.hue;
+
+  if (els.bgHint) {
+    els.bgHint.textContent = state.themeMode === 'dark'
+      ? '0 = fully black · 100 = dark grey'
+      : '0 = pure white · 100 = light tint';
+  }
+
+  if (els.modeButtons) {
+    els.modeButtons.forEach(btn => {
+      const active = btn.dataset.mode === state.themeMode;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-pressed', String(active));
+    });
+  }
+}
+
+function onBgSlider() {
+  const n = readInt(els.bgRange);
+  state.contrast = clampNum(n == null ? 0 : n, 0, 100);
+  applyTheme();
+}
+
+function onBgNumberInput() {
+  const n = readInt(els.bgNumber);
+  if (n == null) return;
+  state.contrast = clampNum(n, 0, 100);
+  applyTheme();
+}
+
+function onBgNumberCommit() {
+  const n = readInt(els.bgNumber);
+  state.contrast = clampNum(n == null ? state.contrast : n, 0, 100);
+  applyTheme();
+}
+
+function onHueSlider() {
+  const n = readInt(els.hueRange);
+  state.hue = clampNum(n == null ? 0 : n, 0, 360);
+  applyTheme();
+}
+
+function onHueNumberInput() {
+  const n = readInt(els.hueNumber);
+  if (n == null) return;
+  state.hue = clampNum(n, 0, 360);
+  applyTheme();
+}
+
+function onHueNumberCommit() {
+  const n = readInt(els.hueNumber);
+  state.hue = clampNum(n == null ? state.hue : n, 0, 360);
+  applyTheme();
+}
+
+function openThemeDialog() {
+  if (!els.themeModal || !els.themeModal.hidden) return;
+  els.themeModal.hidden = false;
+  syncThemeControls();
+  const focusTarget = els.themeModal.querySelector('.segmented button.active') || els.bgRange;
+  if (focusTarget) focusTarget.focus();
+}
+
+function closeThemeDialog() {
+  if (!els.themeModal || els.themeModal.hidden) return;
+  els.themeModal.hidden = true;
+  if (els.themeBtn) els.themeBtn.focus();
+}
+
+/* ------------------------------------------------------------------ *
+ *  Utilities
+ * ------------------------------------------------------------------ */
+function truncate(s, n) {
+  if (!s) return '';
+  return s.length > n ? s.slice(0, n - 1) + '…' : s;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"]/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;',
+  }[c]));
+}
+
+function cssEscape(s) {
+  if (window.CSS && CSS.escape) return CSS.escape(s);
+  return String(s).replace(/[^a-zA-Z0-9_-]/g, ch => '\\' + ch);
+}
+</script>
+</body>
+</html>
