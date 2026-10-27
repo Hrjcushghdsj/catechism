@@ -869,6 +869,62 @@ function showLoadError(err) {
 /* ------------------------------------------------------------------ *
  *  Indexing
  * ------------------------------------------------------------------ */
+
+/**
+ * Some pages contain a numbered paragraph split across multiple
+ * `paragraphs` entries by HTML block boundaries (quoted text, layout
+ * artifacts, etc.). Merge any un-numbered, non-heading fragment into
+ * the previous numbered paragraph so the text and its cross-reference
+ * lines stay together.
+ */
+function mergeParagraphFragments(page) {
+  const src = page.paragraphs;
+  if (!Array.isArray(src) || src.length < 2) return;
+
+  const hasLeadingCcc = p => {
+    const e = p && p.elements && p.elements[0];
+    return !!(e && e.type === 'ref-ccc' && typeof e.ref_number === 'number');
+  };
+
+  const isHeadingLike = p => {
+    const m = (p.elements || []).filter(e => e.type !== 'spacer');
+    if (!m.length) return false;
+    return m.every(e => e.type === 'text' && e.attrs &&
+                        (e.attrs.heavy_header || e.attrs.b));
+  };
+
+  const out = [];
+  for (const p of src) {
+    const prev = out[out.length - 1];
+    const canMerge =
+      prev &&
+      hasLeadingCcc(prev) &&      // the paragraph being extended is numbered
+      !hasLeadingCcc(p) &&        // this fragment is a continuation, not a new §
+      !isHeadingLike(p) &&        // don't absorb a heading
+      !isHeadingLike(prev);       // don't extend a heading
+
+    if (canMerge) {
+      const prevElems = prev.elements || (prev.elements = []);
+      const curElems  = p.elements || [];
+      const last      = prevElems[prevElems.length - 1];
+      const first     = curElems[0];
+
+      // Insert a space between two touching text fragments.
+      if (last && first && last.type === 'text' && first.type === 'text' &&
+          !/\s$/.test(last.text || '') && !/^\s/.test(first.text || '')) {
+        prevElems.push({ type: 'text', text: ' ' });
+      }
+      for (const el of curElems) prevElems.push(el);
+    } else {
+      out.push(Object.assign({}, p, {
+        elements: (p.elements || []).slice(),
+        attrs: p.attrs ? Object.assign({}, p.attrs) : p.attrs,
+      }));
+    }
+  }
+  page.paragraphs = out;
+}
+
 function buildIndexes() {
   const data = state.data;
   state.pageMap = data.page_nodes || {};
@@ -890,6 +946,12 @@ function buildIndexes() {
   const seen = new Set(state.order);
   for (const id in state.pageMap) {
     if (!seen.has(id)) state.order.push(id);
+  }
+
+  // Collapse fragmented paragraphs before indexing, so that cccMap,
+  // searchData, backlinks, and the preview all see one whole paragraph.
+  for (const id of state.order) {
+    mergeParagraphFragments(state.pageMap[id]);
   }
 
   for (const id of state.order) {
@@ -1348,8 +1410,8 @@ function renderPage(id, opts = {}) {
 
 /**
  * Render a cross-reference line.
- *   kind === 'refs' → clicking opens the referenced paragraph
- *   kind === 'back' → clicking previews the referencing paragraph ("probe")
+ * Clicking either "References:" or "Referenced by:" opens the side preview
+ * pane, which offers an "Open in context →" button.
  */
 function renderXrefLine(entries, label, kind) {
   const div = document.createElement('div');
@@ -1380,7 +1442,7 @@ function renderXrefLine(entries, label, kind) {
     const a = document.createElement('a');
     a.href = '#ccc-' + entry.start;
     a.textContent = text;
-    a.title = (kind === 'back' ? 'Preview CCC ' : 'Go to CCC ') + text;
+    a.setAttribute('aria-label', 'Preview CCC ' + text);
 
     a.addEventListener('mouseenter', () => showTooltip(a, entry));
     a.addEventListener('mouseleave', hideTooltip);
@@ -1390,11 +1452,7 @@ function renderXrefLine(entries, label, kind) {
     a.addEventListener('click', (e) => {
       e.preventDefault();
       hideTooltip();
-      if (kind === 'back') {
-        openPreview(entry);
-      } else {
-        navigateToEntry(entry);
-      }
+      openPreview(entry);
     });
 
     div.appendChild(a);
@@ -1453,7 +1511,7 @@ function renderElement(el, page, pageId) {
       a.className = 'ccc-ref';
       a.href = 'javascript:void(0)';
       a.textContent = el.ref_number;
-      a.title = 'Go to CCC ' + el.ref_number;
+      a.setAttribute('aria-label', 'Go to CCC ' + el.ref_number);
       a.addEventListener('click', (e) => {
         e.preventDefault();
         const t = state.cccMap[el.ref_number];
@@ -1945,6 +2003,8 @@ function applyTheme() {
   style.setProperty('--sidebar-bg', side);
   style.setProperty('--accent', dark ? `hsl(${h}, 53%, 74%)` : `hsl(${h}, 60%, 30%)`);
   style.setProperty('--accent-soft', dark ? `hsl(${h}, 18%, 17%)` : `hsl(${h}, 32%, 92%)`);
+  // Highlight tint follows the accent hue (light = pale wash, dark = deep wash)
+  style.setProperty('--highlight', dark ? `hsl(${h}, 45%, 24%)` : `hsl(${h}, 85%, 82%)`);
 
   try {
     localStorage.setItem(THEME_KEY, state.themeMode);
