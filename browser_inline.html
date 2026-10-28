@@ -685,6 +685,8 @@ const state = {
     logic: 'all',        // 'all' | 'any' | 'phrase'
     caseSensitive: false,
   },
+  // embedder support — cached raw ?embed= value (undefined = not yet read)
+  embedRaw: undefined,
 };
 
 const els = {};
@@ -1270,7 +1272,7 @@ function navigate(id, opts = {}) {
   updatePager();
 
   if (!opts.silentHash) {
-    try { history.pushState({ id }, '', '#/' + id); } catch (e) { /* ignore */ }
+    setLocation(id, 'pushState');
   }
 
   const content = document.getElementById('content');
@@ -2097,8 +2099,6 @@ function closeSearch() {
 /* ------------------------------------------------------------------ *
  *  Paragraph context menu (right-click on a highlighted paragraph number)
  * ------------------------------------------------------------------ */
-
-/** Inject the menu markup + styles on first use. */
 function ensureParaMenu() {
   if (paraMenuEl) return paraMenuEl;
 
@@ -2204,7 +2204,6 @@ function closeParaMenu() {
   paraMenuTarget = null;
 }
 
-/** Right-click handler for #page — opens the paragraph menu on highlighted paragraphs. */
 function onPageContextMenu(e) {
   const target = e.target;
   const a = target && target.closest ? target.closest('a.ccc-ref') : null;
@@ -2213,7 +2212,6 @@ function onPageContextMenu(e) {
   const paraEl = a.closest('.para.highlight');
   if (!paraEl) return;
 
-  // Only the paragraph's own number (the first CCC link inside the paragraph).
   if (paraEl.querySelector('a.ccc-ref') !== a) return;
 
   const n = parseInt(a.textContent, 10);
@@ -2224,8 +2222,56 @@ function onPageContextMenu(e) {
   openParaMenu(e.clientX, e.clientY, n, paraEl);
 }
 
-/** Build a `?p=N` deep link from the current browser URL (hash stripped). */
+/* ------------------------------------------------------------------ *
+ *  Embedder support
+ * ------------------------------------------------------------------ */
+
+/**
+ * Raw ?embed= value passed by an embedding page. Cached on first read
+ * so that the value survives even if the query string is later stripped
+ * by in-app navigation. Returns null when the page is opened directly.
+ */
+function getEmbedRaw() {
+  if (state.embedRaw !== undefined) return state.embedRaw;
+  try {
+    state.embedRaw = new URLSearchParams(location.search).get('embed') || null;
+  } catch (e) {
+    state.embedRaw = null;
+  }
+  return state.embedRaw;
+}
+
+/**
+ * Parsed, validated embedder URL. Returns null when absent or when the
+ * scheme is not http(s) — protects against `javascript:` and friends.
+ * Returns a fresh URL object each call; callers may mutate freely.
+ */
+function getEmbedUrl() {
+  const raw = getEmbedRaw();
+  if (!raw) return null;
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    return u;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Build a link to paragraph `n`. Prefers the embedder URL (so the link
+ * points back at the embedding page) but preserves its hash — the
+ * embedder may need it for its own routing. Falls back to this
+ * document's URL when not embedded.
+ */
 function buildParaLink(n) {
+  const embed = getEmbedUrl();
+  if (embed) {
+    // Preserve the embedder's hash: they may use it for their own routing.
+    // Query params (utm, etc.) are preserved; only `p` is (re)set.
+    embed.searchParams.set('p', String(n));
+    return embed.href;
+  }
   try {
     const u = new URL(location.href);
     u.hash = '';
@@ -2236,7 +2282,6 @@ function buildParaLink(n) {
   }
 }
 
-/** Reconstruct a paragraph's plain text (including its § number) from the data model. */
 function paragraphText(paraEl) {
   const idx = parseInt(paraEl.dataset.paraIndex, 10);
   const page = state.currentId ? state.pageMap[state.currentId] : null;
@@ -2255,12 +2300,10 @@ function paragraphText(paraEl) {
     if (el.type === 'text') append(el.text || '');
     else if (el.type === 'ref-ccc') append(String(el.ref_number));
     else if (el.type === 'spacer') append(' ');
-    // footnote refs are intentionally skipped
   }
   return out.replace(/\s+/g, ' ').trim();
 }
 
-/** Clipboard write with a legacy fallback. */
 async function copyToClipboard(text) {
   try {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -2409,20 +2452,32 @@ function parseParagraphQuery() {
   }
 }
 
-/** Replace the URL with #/<id> and drop the consumed ?p= parameter. */
-function replaceHashAndClearP(id) {
+/**
+ * Update the address bar to `?<preserved-query>#/<id>`, stripping the
+ * consumed `?p=` but preserving the embedder `?embed=`. `mode` is
+ * 'pushState' or 'replaceState'. Falls back to a hash-only URL if the
+ * URL constructor is unavailable or throws.
+ */
+function setLocation(id, mode) {
   try {
     const u = new URL(location.href);
-    u.searchParams.delete('p');
     u.hash = '#/' + id;
-    history.replaceState({ id }, '', u.href);
+    u.searchParams.delete('p');
+    const raw = getEmbedRaw();
+    if (raw) u.searchParams.set('embed', raw);
+    history[mode]({ id }, '', u.href);
   } catch (e) {
-    replaceHash(id);
+    try { history[mode]({ id }, '', '#/' + id); } catch (e2) { /* ignore */ }
   }
 }
 
+function replaceHashAndClearP(id) {
+  setLocation(id, 'replaceState');
+}
+
 function routeInitial() {
-  // ?p=<n> deep link — jump to that CCC paragraph and highlight it
+  // ?p=<n> deep link — jump to that CCC paragraph and highlight it.
+  // The ?embed= parameter (if present) is preserved across the URL rewrite.
   const pNum = parseParagraphQuery();
   if (pNum != null) {
     const t = state.cccMap[pNum];
@@ -2466,7 +2521,7 @@ function parseHashId() {
 }
 
 function replaceHash(id) {
-  try { history.replaceState({ id }, '', '#/' + id); } catch (e) { /* ignore */ }
+  setLocation(id, 'replaceState');
 }
 
 /* ------------------------------------------------------------------ *
