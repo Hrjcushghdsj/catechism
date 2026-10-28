@@ -4,18 +4,24 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>Catechism Browser</title>
+<title>Catechism of the Catholic Church</title>
 <style>
   :root {
+    /* Defaults — single source of truth, read by setupTheme() in the script
+       below when localStorage has no saved value yet. Keep the two hue
+       inputs in the theme dialog in sync with --default-hue. */
+    --default-hue: 30;
+    --default-contrast: 50;
+
     --bg: #ffffff;
     --bg-alt: #f6f4ef;
     --sidebar-bg: #faf8f3;
     --text: #1c1b19;
     --muted: #6b675f;
-    --accent: hsl(30, 59%, 30%);
-    --accent-soft: #f1e4e4;
+    --accent: hsl(var(--default-hue), 59%, 30%);
+    --accent-soft: hsl(var(--default-hue), 32%, 92%);
     --border: #ddd8cf;
-    --highlight: #fff1b8;
+    --highlight: hsla(48, 85%, 82%, 0.42);
     --shadow: rgba(0,0,0,.14);
     --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
     --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -26,10 +32,10 @@
     --sidebar-bg: #101010;
     --text: #e9e6e0;
     --muted: #a7a299;
-    --accent: hsl(30, 53%, 74%);
-    --accent-soft: #332323;
+    --accent: hsl(var(--default-hue), 53%, 74%);
+    --accent-soft: hsl(var(--default-hue), 19%, 17%);
     --border: #606060;
-    --highlight: #4a3f16;
+    --highlight: hsla(48, 45%, 24%, 0.30);
     --shadow: rgba(0,0,0,.5);
   }
 
@@ -238,7 +244,7 @@
   .heavy { font-weight: 700; }
 
   a.ccc-ref {
-    color: var(--accent); font-family: var(--sans); font-size: 0.78em; font-weight: 700;
+    color: var(--accent); font-family: var(--sans); font-size: 0.9em; font-weight: 700;
     text-decoration: none; margin-right: 0.32em; border-bottom: 1px dotted transparent; cursor: pointer;
   }
   a.ccc-ref:hover { border-bottom-color: currentColor; }
@@ -255,7 +261,7 @@
   /* ---------- See also / cross-reference lines ---------- */
   .see-also {
     font-family: var(--sans); font-size: 0.8rem; color: var(--muted);
-    margin: -0.35em 0 1.1em 0.2em; line-height: 1.5;
+    margin: -0.35em 0 1.1em 2em; line-height: 1.5;
   }
   .see-also a {
     color: var(--accent); text-decoration: none; font-weight: 600;
@@ -619,24 +625,22 @@
     </div>
 
     <div class="field">
-      <label for="bg-range">Background</label>
+      <label for="bg-range">Contrast</label>
       <div class="field-controls">
         <input type="range" id="bg-range" min="0" max="100" step="1" value="0">
         <input type="number" id="bg-number" min="0" max="100" step="1" value="0"
-               inputmode="numeric" aria-label="Background brightness, 0 to 100">
+               inputmode="numeric" aria-label="Contrast, 0 to 100">
       </div>
-      <p class="field-hint" id="bg-hint">0 = pure white · 100 = light tint</p>
     </div>
 
     <div class="field">
-      <label for="hue-range">Accent hue</label>
+      <label for="hue-range">Color</label>
       <div class="field-controls">
-        <input type="range" id="hue-range" min="0" max="360" step="1" value="0">
-        <input type="number" id="hue-number" min="0" max="360" step="1" value="0"
+        <input type="range" id="hue-range" min="0" max="360" step="1" value="30">
+        <input type="number" id="hue-number" min="0" max="360" step="1" value="30"
                inputmode="numeric" aria-label="Accent hue, 0 to 360 degrees">
         <span id="hue-swatch" class="swatch" aria-hidden="true"></span>
       </div>
-      <p class="field-hint">0° red · 120° green · 240° blue</p>
     </div>
 
     <div class="modal-foot">
@@ -675,10 +679,12 @@ const state = {
   data: null,
   refsMap: {},
   lastPageOpts: null,
-  // theme
+  // theme — these are placeholder initial values; setupTheme() replaces them
+  // from localStorage or from the CSS defaults (`--default-hue`,
+  // `--default-contrast`) before the first paint of themed UI.
   themeMode: 'light',
   contrast: 0,
-  hue: 0,
+  hue: 30,
   // advanced search
   searchOpts: {
     match: 'contains',   // 'contains' | 'whole' | 'regex'
@@ -726,7 +732,6 @@ async function init() {
   els.themeModal   = $('#theme-modal');
   els.bgRange      = $('#bg-range');
   els.bgNumber     = $('#bg-number');
-  els.bgHint       = $('#bg-hint');
   els.hueRange     = $('#hue-range');
   els.hueNumber    = $('#hue-number');
   els.modeButtons  = Array.from(document.querySelectorAll('#theme-modal .segmented button'));
@@ -1018,6 +1023,18 @@ function mergeParagraphFragments(page) {
 
 function buildIndexes() {
   const data = state.data;
+
+  // Insert here — clean the data once, up front
+  for (const id in data.page_nodes) {
+    const paras = data.page_nodes[id].paragraphs;
+    while (
+      paras.length > 0 &&
+      paras[paras.length - 1].elements.length === 1 &&
+      paras[paras.length - 1].elements[0].type === "spacer"
+    ) {
+      paras.pop();
+    }
+  }
   state.pageMap = data.page_nodes || {};
   state.tocMap = data.toc_nodes || {};
   state.order = [];
@@ -1278,8 +1295,25 @@ function navigate(id, opts = {}) {
   const content = document.getElementById('content');
   if (content) content.scrollTop = 0;
 
-  document.title = (state.tocMap[id] ? state.tocMap[id].text : id) + ' — Catechism';
+  updateDocumentTitle(id);
   if (window.innerWidth <= 860) closeSidebar();
+}
+
+function updateDocumentTitle(pageId) {
+  const hl = els.page.querySelector('.para.highlight');
+  if (hl && hl.dataset.paraIndex != null) {
+    const idx = parseInt(hl.dataset.paraIndex, 10);
+    const page = state.pageMap[pageId];
+    const para = page && page.paragraphs ? page.paragraphs[idx] : null;
+    if (para) {
+      const n = getParaNumber(para);
+      if (n != null) {
+        document.title = 'CCC § ' + n + ' - ' + truncate(extractPlainText(para), 120);
+        return;
+      }
+    }
+  }
+  document.title = (state.tocMap[pageId] ? state.tocMap[pageId].text : pageId) + ' — Catechism';
 }
 
 function navigateToEntry(entry) {
@@ -1393,12 +1427,12 @@ function renderPage(id, opts = {}) {
 
       const refEntries = collectReferencesFor(ownNum, page, p);
       if (refEntries.length) {
-        body.appendChild(renderXrefLine(refEntries, 'References:', 'refs'));
+        body.appendChild(renderXrefLine(refEntries, 'See Also:', 'refs'));
       }
 
       const backEntries = getReferencedBy(ownNum);
       if (backEntries.length) {
-        body.appendChild(renderXrefLine(backEntries, 'Referenced by:', 'back'));
+        body.appendChild(renderXrefLine(backEntries, 'Cited In:', 'back'));
       }
     }
   });
@@ -1582,6 +1616,22 @@ function renderElement(el, page, pageId) {
       a.setAttribute('aria-label', 'Go to CCC ' + el.ref_number);
       a.addEventListener('click', (e) => {
         e.preventDefault();
+
+        // If this paragraph is already highlighted and this link is the
+        // paragraph's own leading number, clicking just clears the
+        // highlight instead of re-navigating.
+        const para = a.closest('.para.highlight');
+        if (para && para.querySelector('a.ccc-ref') === a) {
+          para.classList.remove('highlight');
+          if (state.lastPageOpts) {
+            delete state.lastPageOpts.highlightCcc;
+            delete state.lastPageOpts.paraIndex;
+            delete state.lastPageOpts.highlightRange;
+          }
+          updateDocumentTitle(state.currentId);
+          return;
+        }
+
         const t = state.cccMap[el.ref_number];
         if (t) navigate(t.pageId, { highlightCcc: el.ref_number });
       });
@@ -2531,6 +2581,10 @@ const THEME_KEY    = 'ccc-theme';
 const CONTRAST_KEY = 'ccc-contrast';
 const HUE_KEY      = 'ccc-hue';
 
+// Transparency of the highlight color
+const HIGHLIGHT_ALPHA_LIGHT = 0.5;
+const HIGHLIGHT_ALPHA_DARK  = 0.5;
+
 function clampNum(n, lo, hi) { return Math.min(hi, Math.max(lo, n)); }
 function clampByte(n) { return Math.min(255, Math.max(0, n)); }
 
@@ -2551,12 +2605,17 @@ function setupTheme() {
     ? savedMode
     : (prefersDark ? 'dark' : 'light');
 
+  // Defaults live in the stylesheet (`:root { --default-hue; --default-contrast }`)
+  // so pre-JS paint and post-JS theme agree. A saved preference wins.
+  const defaultHue      = clampNum(getCssInt('--default-hue', 30), 0, 360);
+  const defaultContrast = clampNum(getCssInt('--default-contrast', 0), 0, 100);
+
   const savedContrast = parseInt(localStorage.getItem(CONTRAST_KEY), 10);
   state.contrast = Number.isFinite(savedContrast)
-    ? clampNum(savedContrast, 0, 100) : 0;
+    ? clampNum(savedContrast, 0, 100) : defaultContrast;
 
   const savedHue = parseInt(localStorage.getItem(HUE_KEY), 10);
-  state.hue = Number.isFinite(savedHue) ? clampNum(savedHue, 0, 360) : 0;
+  state.hue = Number.isFinite(savedHue) ? clampNum(savedHue, 0, 360) : defaultHue;
 
   applyTheme();
 }
@@ -2566,32 +2625,67 @@ function applyTheme() {
   const dark = state.themeMode === 'dark';
   root.dataset.theme = state.themeMode;
 
+  const h = state.hue;
   const t = state.contrast / 100;
-  let bg, alt, side;
+
+  // Every surface is derived from the accent hue. As contrast rises,
+  // backgrounds collapse toward pure black/white and text brightens
+  // toward pure white/black, so max contrast = fully white-on-black
+  // (dark) or black-on-white (light).
+  const hsl = (s, l) =>
+    `hsl(${h}, ${Math.round(s * 10) / 10}%, ${Math.round(l * 10) / 10}%)`;
+  const hsla = (s, l, a) =>
+    `hsla(${h}, ${Math.round(s * 10) / 10}%, ${Math.round(l * 10) / 10}%, ${a})`;
+
+  let bg, alt, side, text, muted, border, accent, accentSoft, highlight, shadow;
 
   if (dark) {
-    const v = Math.round(t * 58);
-    const a = Math.min(255, v + 16);
-    bg   = `rgb(${v}, ${v}, ${v})`;
-    alt  = `rgb(${a}, ${a}, ${a})`;
+    const bgL = 14 - t * 14;              // 14% → 0%
+    const bgS = 32 - t * 32;              // 32% → 0%
+    bg   = hsl(bgS, bgL);
+    alt  = hsl(bgS * 0.9, bgL + 4);
     side = alt;
+
+    const textL = 66 + t * 34;            // 66% → 100%
+    const textS = 20 - t * 20;            // 20% → 0%
+    text   = hsl(textS, textL);
+    muted  = hsl(12 - t * 12, 52 + t * 30);
+    border = hsl(24, 26 + t * 20);
+
+    accent     = hsl(60, 64 + t * 18);
+    accentSoft = hsl(26, 18 - t * 8);
+    highlight  = hsla(55, 30, HIGHLIGHT_ALPHA_DARK);
+    shadow     = `rgba(0, 0, 0, ${(0.55 + t * 0.35).toFixed(2)})`;
   } else {
-    const r = Math.round(255 - t * 14);
-    const g = Math.round(255 - t * 20);
-    const b = Math.round(255 - t * 34);
-    bg   = `rgb(${r}, ${g}, ${b})`;
-    side = `rgb(${clampByte(r - 4)}, ${clampByte(g - 6)}, ${clampByte(b - 13)})`;
-    alt  = `rgb(${clampByte(r - 9)}, ${clampByte(g - 11)}, ${clampByte(b - 18)})`;
+    const bgL = 96 - t * 4;               // 96% → 100%
+    const bgS = 55 - t * 55;              // 55% → 0%
+    bg   = hsl(bgS, bgL);
+    alt  = hsl(bgS * 0.9, bgL - 3);
+    side = alt;
+
+    const textL = 30 - t * 30;            // 30% → 0%
+    const textS = 25 - t * 25;            // 25% → 0%
+    text   = hsl(textS, textL);
+    muted  = hsl(14, 46 - t * 12);
+    border = hsl(20, 82 - t * 32);
+
+    accent     = hsl(65, 34 - t * 14);
+    accentSoft = hsl(45, 92 - t * 6);
+    highlight  = hsla(85, 80, HIGHLIGHT_ALPHA_LIGHT);
+    shadow     = `rgba(0, 0, 0, ${(0.14 + t * 0.12).toFixed(2)})`;
   }
 
-  const h = state.hue;
   const style = root.style;
   style.setProperty('--bg', bg);
   style.setProperty('--bg-alt', alt);
   style.setProperty('--sidebar-bg', side);
-  style.setProperty('--accent', dark ? `hsl(${h}, 53%, 74%)` : `hsl(${h}, 60%, 30%)`);
-  style.setProperty('--accent-soft', dark ? `hsl(${h}, 18%, 17%)` : `hsl(${h}, 32%, 92%)`);
-  style.setProperty('--highlight', dark ? `hsl(${h}, 45%, 24%)` : `hsl(${h}, 85%, 82%)`);
+  style.setProperty('--text', text);
+  style.setProperty('--muted', muted);
+  style.setProperty('--border', border);
+  style.setProperty('--accent', accent);
+  style.setProperty('--accent-soft', accentSoft);
+  style.setProperty('--highlight', highlight);
+  style.setProperty('--shadow', shadow);
 
   try {
     localStorage.setItem(THEME_KEY, state.themeMode);
@@ -2609,12 +2703,6 @@ function syncThemeControls() {
   els.hueRange.value = state.hue;
   els.bgNumber.value = state.contrast;
   els.hueNumber.value = state.hue;
-
-  if (els.bgHint) {
-    els.bgHint.textContent = state.themeMode === 'dark'
-      ? '0 = fully black · 100 = dark grey'
-      : '0 = pure white · 100 = light tint';
-  }
 
   if (els.modeButtons) {
     els.modeButtons.forEach(btn => {
@@ -2694,6 +2782,23 @@ function escapeHtml(s) {
 function cssEscape(s) {
   if (window.CSS && CSS.escape) return CSS.escape(s);
   return String(s).replace(/[^a-zA-Z0-9_-]/g, ch => '\\' + ch);
+}
+
+/**
+ * Read an integer value from a CSS custom property defined on :root.
+ * Returns `fallback` when the variable is missing or non-numeric. Used
+ * so `--default-hue` / `--default-contrast` in the stylesheet are the
+ * single source of truth for theme defaults.
+ */
+function getCssInt(name, fallback) {
+  try {
+    const v = getComputedStyle(document.documentElement)
+      .getPropertyValue(name).trim();
+    const n = parseInt(v, 10);
+    return Number.isFinite(n) ? n : fallback;
+  } catch (e) {
+    return fallback;
+  }
 }
 </script>
 </body>
