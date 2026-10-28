@@ -64,33 +64,89 @@
     display: none; background: none; border: 1px solid var(--border); color: var(--text);
     border-radius: 6px; width: 38px; height: 38px; font-size: 1.1rem; cursor: pointer;
   }
-  #search-wrap { position: relative; margin-left: auto; width: min(460px, 46vw); }
+
+  /* ---------- Search ---------- */
+  #search-wrap { position: relative; margin-left: auto; width: min(520px, 52vw); }
+  .search-row { display: flex; gap: 6px; align-items: center; }
   #search {
-    width: 100%; padding: 8px 12px; font-size: 0.9rem; font-family: var(--sans);
+    flex: 1; min-width: 0;
+    height: 38px; padding: 0 12px; font-size: 0.9rem; font-family: var(--sans);
     color: var(--text); background: var(--bg); border: 1px solid var(--border);
     border-radius: 8px; outline: none;
   }
   #search:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
 
-  /* ---------- Theme button ---------- */
-  #theme-btn {
+  #adv-toggle {
+    position: relative;
     display: flex; align-items: center; justify-content: center;
     background: none; border: 1px solid var(--border); color: var(--text);
     border-radius: 8px; width: 38px; height: 38px; padding: 0;
     cursor: pointer; flex-shrink: 0;
   }
-  #theme-btn:hover { border-color: var(--accent); color: var(--accent); }
-  #theme-btn svg { display: block; }
+  #adv-toggle:hover { border-color: var(--accent); color: var(--accent); }
+  #adv-toggle.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  #adv-toggle svg { display: block; }
+  #adv-toggle.has-active::after {
+    content: '';
+    position: absolute;
+    top: 5px; right: 5px;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  #search-dropdown {
+    position: absolute; top: calc(100% + 6px); right: 0; width: min(600px, 90vw);
+    max-height: 72vh; overflow-y: auto; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 10px;
+    box-shadow: 0 12px 40px var(--shadow); display: none; z-index: 60;
+  }
+  #search-dropdown.open { display: block; }
+
+  /* ---------- Advanced search panel ---------- */
+  #advanced-search {
+    padding: 12px 14px; border-bottom: 1px solid var(--border);
+    background: var(--bg-alt);
+  }
+  #advanced-search[hidden] { display: none; }
+
+  .adv-group { margin-bottom: 10px; }
+  .adv-group:last-of-type { margin-bottom: 8px; }
+  .adv-label {
+    display: block; font-family: var(--sans); font-size: 0.7rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .adv-seg {
+    display: flex; gap: 3px; padding: 3px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  }
+  .adv-seg button {
+    flex: 1; padding: 6px 8px; border: none; background: none;
+    color: var(--muted); font-family: var(--sans); font-size: 0.78rem;
+    border-radius: 5px; cursor: pointer;
+  }
+  .adv-seg button:hover { color: var(--text); }
+  .adv-seg button.active {
+    background: var(--accent-soft); color: var(--accent); font-weight: 700;
+  }
+  #adv-logic-group.disabled { opacity: 0.45; pointer-events: none; }
+
+  .adv-check {
+    display: flex; align-items: center; gap: 7px;
+    font-family: var(--sans); font-size: 0.8rem; color: var(--text); cursor: pointer;
+  }
+  .adv-check input { accent-color: var(--accent); cursor: pointer; }
+  .adv-hint {
+    font-family: var(--sans); font-size: 0.72rem; color: var(--muted);
+    line-height: 1.45; margin-top: 6px;
+  }
 
   /* ---------- Search results ---------- */
-  #search-results {
-    position: absolute; top: calc(100% + 6px); right: 0; width: min(600px, 86vw);
-    max-height: 66vh; overflow-y: auto; background: var(--bg); border: 1px solid var(--border);
-    border-radius: 10px; box-shadow: 0 12px 40px var(--shadow); display: none; z-index: 60;
-  }
+  #search-results { display: none; }
   #search-results.open { display: block; }
   .sr-header {
-    position: sticky; top: 0; padding: 7px 12px; font-size: 0.72rem;
+    padding: 7px 12px; font-size: 0.72rem;
     text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
     background: var(--bg-alt); border-bottom: 1px solid var(--border);
   }
@@ -101,6 +157,16 @@
   .sr-snippet { margin-top: 3px; font-size: 0.8rem; line-height: 1.45; color: var(--muted); font-family: var(--serif); }
   .sr-snippet mark { background: var(--highlight); color: inherit; padding: 0 1px; border-radius: 2px; }
   .sr-empty { padding: 16px; color: var(--muted); font-size: 0.9rem; }
+
+  /* ---------- Theme button ---------- */
+  #theme-btn {
+    display: flex; align-items: center; justify-content: center;
+    background: none; border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; width: 38px; height: 38px; padding: 0;
+    cursor: pointer; flex-shrink: 0;
+  }
+  #theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+  #theme-btn svg { display: block; }
 
   /* ---------- Layout ---------- */
   #layout { flex: 1; display: flex; min-height: 0; }
@@ -454,8 +520,49 @@
   <div id="brand">Catechism <span>of the Catholic Church</span></div>
 
   <div id="search-wrap">
-    <input id="search" type="search" placeholder="Search text or CCC §…" autocomplete="off" spellcheck="false" aria-label="Search the Catechism">
-    <div id="search-results" role="listbox"></div>
+    <div class="search-row">
+      <input id="search" type="search" placeholder="Search text or CCC §…" autocomplete="off" spellcheck="false" aria-label="Search the Catechism">
+      <button id="adv-toggle" aria-label="Advanced search options" aria-expanded="false" aria-controls="advanced-search" title="Advanced search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false">
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="6" y1="12" x2="18" y2="12"/>
+          <line x1="10" y1="18" x2="14" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <div id="search-dropdown">
+      <div id="advanced-search" hidden>
+        <div class="adv-group">
+          <span class="adv-label" id="adv-match-label">Match</span>
+          <div class="adv-seg" role="group" aria-labelledby="adv-match-label">
+            <button type="button" data-match="contains" class="active">Contains</button>
+            <button type="button" data-match="whole">Whole word</button>
+            <button type="button" data-match="regex">Regex</button>
+          </div>
+        </div>
+
+        <div class="adv-group" id="adv-logic-group">
+          <span class="adv-label" id="adv-logic-label">Multiple words</span>
+          <div class="adv-seg" role="group" aria-labelledby="adv-logic-label">
+            <button type="button" data-logic="all" class="active">All</button>
+            <button type="button" data-logic="any">Any</button>
+            <button type="button" data-logic="phrase">Exact phrase</button>
+          </div>
+        </div>
+
+        <div class="adv-group">
+          <label class="adv-check">
+            <input type="checkbox" id="adv-case">
+            <span>Case sensitive</span>
+          </label>
+        </div>
+
+        <div class="adv-hint" id="adv-hint"></div>
+      </div>
+
+      <div id="search-results" role="listbox"></div>
+    </div>
   </div>
 
   <button id="theme-btn" aria-label="Theme settings" aria-haspopup="dialog" aria-controls="theme-modal" title="Theme settings">
@@ -543,33 +650,14 @@
 
 /* =========================================================================
  *  CONFIG — edit this section
- * =========================================================================
- *
- *  Each data source is loaded in this order:
- *    1. Inline contents (if you paste them below)
- *    2. URL (if configured)
- *    3. File picker (only if the first two fail / are empty)
- *
- *  To use inline contents, paste either the parsed JSON object or the raw
- *  JSON text as a string. Example:
- *
- *    const CCC_JSON_INLINE = { "page_nodes": { ... }, "toc_nodes": { ... }, ... };
- *    const REFS_JSON_INLINE = { "1": { "references": [], "referenced by": [] }, ... };
- *
- *  Set either constant to null (or '') to fall through to the URL.
  * ========================================================================= */
 
 const CCC_JSON_URL  = 'https://raw.githubusercontent.com/Hrjcushghdsj/catechism/refs/heads/main/ccc.json';
 const REFS_JSON_URL = 'https://raw.githubusercontent.com/Hrjcushghdsj/catechism/refs/heads/main/references.json';
 
-const CCC_JSON_INLINE  = null;   // ← paste ccc.json contents here to override
-const REFS_JSON_INLINE = null;   // ← paste references.json contents here to override
+const CCC_JSON_INLINE  = null;
+const REFS_JSON_INLINE = null;
 
-/* ------------------------------------------------------------------ *
- *  Optional explicit cross-reference map.
- *  Add entries like: 385: [283, 293]
- *  They are merged with anything detected from the data.
- * ------------------------------------------------------------------ */
 const EXPLICIT_XREFS = {
   // 385: [283, 293],
 };
@@ -585,17 +673,25 @@ const state = {
   backlinks: {},
   searchData: {},
   data: null,
-  refsMap: {},          // number -> { references: [{start,end}], referencedBy: [{start,end}] }
+  refsMap: {},
   lastPageOpts: null,
   // theme
   themeMode: 'light',
   contrast: 0,
   hue: 0,
+  // advanced search
+  searchOpts: {
+    match: 'contains',   // 'contains' | 'whole' | 'regex'
+    logic: 'all',        // 'all' | 'any' | 'phrase'
+    caseSensitive: false,
+  },
 };
 
 const els = {};
 let tooltipEl = null;
 let searchTimer = null;
+let paraMenuEl = null;
+let paraMenuTarget = null;
 
 /* ------------------------------------------------------------------ *
  *  Boot
@@ -608,6 +704,11 @@ async function init() {
   els.search       = $('#search');
   els.searchResults = $('#search-results');
   els.searchWrap   = $('#search-wrap');
+  els.searchDropdown = $('#search-dropdown');
+  els.advToggle    = $('#adv-toggle');
+  els.advPanel     = $('#advanced-search');
+  els.advHint      = $('#adv-hint');
+  els.advLogicGroup = $('#adv-logic-group');
   els.sidebar      = $('#sidebar');
   els.backdrop     = $('#backdrop');
   els.menuToggle   = $('#menu-toggle');
@@ -674,7 +775,6 @@ function startWithData(data) {
   buildIndexes();
   renderTree();
 
-  // Apply inline references immediately (before the first page render)
   const inlineRefs = parseMaybeJson(REFS_JSON_INLINE);
   if (inlineRefs) state.refsMap = normalizeRefs(inlineRefs);
 
@@ -728,7 +828,6 @@ function applyRefsData(raw) {
   state.refsMap = normalizeRefs(raw);
   removeRefsBanner();
 
-  // Re-render the current page so the new reference lines appear.
   if (state.currentId) {
     const content = document.getElementById('content');
     const top = content ? content.scrollTop : 0;
@@ -762,7 +861,6 @@ function normalizeEntryList(list) {
 
   for (const item of list) {
     if (Array.isArray(item)) {
-      // A range: [id_start, id_end]
       if (item.length >= 2) {
         const a = toInt(item[0]);
         const b = toInt(item[1]);
@@ -784,7 +882,7 @@ function toInt(v) {
   return null;
 }
 
-/* ---- References banner (offers manual file selection) ---- */
+/* ---- References banner ---- */
 function showRefsBanner() {
   if (document.getElementById('refs-banner')) return;
 
@@ -832,7 +930,7 @@ function removeRefsBanner() {
   if (b) b.remove();
 }
 
-/* ---- Catechism load error (offers manual file selection) ---- */
+/* ---- Catechism load error ---- */
 function showLoadError(err) {
   els.page.innerHTML = '';
   const box = document.createElement('div');
@@ -869,14 +967,6 @@ function showLoadError(err) {
 /* ------------------------------------------------------------------ *
  *  Indexing
  * ------------------------------------------------------------------ */
-
-/**
- * Some pages contain a numbered paragraph split across multiple
- * `paragraphs` entries by HTML block boundaries (quoted text, layout
- * artifacts, etc.). Merge any un-numbered, non-heading fragment into
- * the previous numbered paragraph so the text and its cross-reference
- * lines stay together.
- */
 function mergeParagraphFragments(page) {
   const src = page.paragraphs;
   if (!Array.isArray(src) || src.length < 2) return;
@@ -898,10 +988,10 @@ function mergeParagraphFragments(page) {
     const prev = out[out.length - 1];
     const canMerge =
       prev &&
-      hasLeadingCcc(prev) &&      // the paragraph being extended is numbered
-      !hasLeadingCcc(p) &&        // this fragment is a continuation, not a new §
-      !isHeadingLike(p) &&        // don't absorb a heading
-      !isHeadingLike(prev);       // don't extend a heading
+      hasLeadingCcc(prev) &&
+      !hasLeadingCcc(p) &&
+      !isHeadingLike(p) &&
+      !isHeadingLike(prev);
 
     if (canMerge) {
       const prevElems = prev.elements || (prev.elements = []);
@@ -909,7 +999,6 @@ function mergeParagraphFragments(page) {
       const last      = prevElems[prevElems.length - 1];
       const first     = curElems[0];
 
-      // Insert a space between two touching text fragments.
       if (last && first && last.type === 'text' && first.type === 'text' &&
           !/\s$/.test(last.text || '') && !/^\s/.test(first.text || '')) {
         prevElems.push({ type: 'text', text: ' ' });
@@ -948,8 +1037,6 @@ function buildIndexes() {
     if (!seen.has(id)) state.order.push(id);
   }
 
-  // Collapse fragmented paragraphs before indexing, so that cccMap,
-  // searchData, backlinks, and the preview all see one whole paragraph.
   for (const id of state.order) {
     mergeParagraphFragments(state.pageMap[id]);
   }
@@ -968,7 +1055,7 @@ function buildIndexes() {
       }
 
       text = text.trim();
-      if (text) paras.push({ lower: text.toLowerCase(), idx: pi, text });
+      if (text) paras.push({ idx: pi, text });
 
       if (firstCcc !== null && state.cccMap[firstCcc] === undefined) {
         state.cccMap[firstCcc] = { pageId: id, paraIndex: pi };
@@ -996,8 +1083,6 @@ function buildIndexes() {
 /* ------------------------------------------------------------------ *
  *  Cross-reference helpers
  * ------------------------------------------------------------------ */
-
-/** The paragraph's own CCC number (its first ref-ccc element). */
 function getParaNumber(para) {
   const els = para && para.elements;
   if (!Array.isArray(els)) return null;
@@ -1009,12 +1094,10 @@ function getParaNumber(para) {
   return null;
 }
 
-/** References for one paragraph: references.json entries + auto-detected ones. */
 function collectReferencesFor(ownNum, page, para) {
   const out = [];
   const covered = (n) => out.some(e => n >= e.start && n <= e.end);
 
-  // 1. references.json is the primary source
   if (ownNum != null && state.refsMap[ownNum]) {
     for (const e of state.refsMap[ownNum].references) {
       if (e.start === ownNum && e.end === ownNum) continue;
@@ -1022,7 +1105,6 @@ function collectReferencesFor(ownNum, page, para) {
     }
   }
 
-  // 2. Fallback / augmentation from ccc.json
   const auto = extractCrossReferences(page, para);
   for (const n of auto) {
     if (n === ownNum) continue;
@@ -1033,7 +1115,6 @@ function collectReferencesFor(ownNum, page, para) {
   return out;
 }
 
-/** Paragraphs that reference this one (from references.json). */
 function getReferencedBy(ownNum) {
   if (ownNum == null) return [];
   const data = state.refsMap[ownNum];
@@ -1047,21 +1128,18 @@ function extractCrossReferences(page, para) {
   const ownNumber = elements[0] && elements[0].type === 'ref-ccc'
     ? elements[0].ref_number : null;
 
-  // 1. Explicit mapping supplied by the caller
   if (ownNumber != null && Array.isArray(EXPLICIT_XREFS[ownNumber])) {
     EXPLICIT_XREFS[ownNumber].forEach(n => {
       if (state.cccMap[n]) refs.add(n);
     });
   }
 
-  // 2. A `cross_references` array on the paragraph object
   if (Array.isArray(para.cross_references)) {
     para.cross_references.forEach(n => {
       if (state.cccMap[n]) refs.add(n);
     });
   }
 
-  // 3. Additional ref-ccc elements beyond the first (the first is the own number)
   let seenCcc = 0;
   for (const el of elements) {
     if (el.type === 'ref-ccc') {
@@ -1073,13 +1151,11 @@ function extractCrossReferences(page, para) {
     }
   }
 
-  // 4. §N patterns in the paragraph's own text
   for (const el of elements) {
     if (el.type !== 'text' || !el.text) continue;
     scanForSectionRefs(el.text, ownNumber, refs);
   }
 
-  // 5. §N patterns in the footnotes attached to this paragraph
   const footnotes = page.footnotes || {};
   for (const el of elements) {
     if (el.type !== 'ref') continue;
@@ -1186,6 +1262,7 @@ function navigate(id, opts = {}) {
 
   closePreview();
   hideTooltip();
+  closeParaMenu();
 
   state.currentId = id;
   renderPage(id, opts);
@@ -1203,7 +1280,6 @@ function navigate(id, opts = {}) {
   if (window.innerWidth <= 860) closeSidebar();
 }
 
-/** Navigate to a reference entry (single number or range). */
 function navigateToEntry(entry) {
   const t = state.cccMap[entry.start];
   if (!t) return;
@@ -1277,6 +1353,7 @@ function renderPage(id, opts = {}) {
   (page.paragraphs || []).forEach((p, pi) => {
     const pEl = document.createElement('p');
     pEl.className = 'para';
+    pEl.dataset.paraIndex = String(pi);
 
     if (p.attrs && p.attrs.indent) pEl.classList.add('indent');
 
@@ -1299,7 +1376,6 @@ function renderPage(id, opts = {}) {
 
     if (onlySpacers) pEl.classList.add('blank');
 
-    // Highlighting
     if (pi === highlightIndex) pEl.classList.add('highlight');
     if (highlightRange) {
       const n = getParaNumber(p);
@@ -1310,7 +1386,6 @@ function renderPage(id, opts = {}) {
 
     body.appendChild(pEl);
 
-    // Cross-reference lines (references.json + auto-detected)
     if (!isHeading && !onlySpacers) {
       const ownNum = getParaNumber(p);
 
@@ -1328,7 +1403,6 @@ function renderPage(id, opts = {}) {
 
   frag.appendChild(body);
 
-  // Footnotes
   const footnotes = page.footnotes || {};
   const fnKeys = Object.keys(footnotes);
   if (fnKeys.length) {
@@ -1370,7 +1444,6 @@ function renderPage(id, opts = {}) {
     frag.appendChild(sec);
   }
 
-  // Legacy page-level backlinks — only used when references.json is unavailable
   const refsLoaded = Object.keys(state.refsMap).length > 0;
   if (!refsLoaded) {
     const back = state.backlinks[id];
@@ -1408,11 +1481,6 @@ function renderPage(id, opts = {}) {
   }
 }
 
-/**
- * Render a cross-reference line.
- * Clicking either "References:" or "Referenced by:" opens the side preview
- * pane, which offers an "Open in context →" button.
- */
 function renderXrefLine(entries, label, kind) {
   const div = document.createElement('div');
   div.className = 'see-also ' + (kind || '');
@@ -1479,10 +1547,8 @@ function renderElement(el, page, pageId) {
       sup.className = 'fn-ref';
       sup.textContent = el.number;
 
-      // Accessibility: aria-label is not a visual tooltip, so it's safe.
       sup.setAttribute('aria-label', 'Footnote ' + el.number);
 
-      // Resolve the footnote for this paragraph/page.
       const footnote = (page.footnotes || {})[el.number];
 
       const showFnTip = () => {
@@ -1580,7 +1646,6 @@ function showTooltip(anchor, entry) {
   positionTooltip(anchor);
 }
 
-/** Show a footnote's text in the shared tooltip. */
 function showFootnoteTooltip(anchor, footnote) {
   const tip = ensureTooltip();
   tip.innerHTML = '';
@@ -1689,29 +1754,234 @@ function renderPreviewParagraph(para, page) {
 
   for (let i = start; i < elements.length; i++) {
     const el = elements[i];
-    if (el.type === 'ref') continue;      // skip footnote markers in preview
+    if (el.type === 'ref') continue;
     pEl.appendChild(renderElement(el, page, page.id));
   }
   return pEl;
 }
 
 /* ------------------------------------------------------------------ *
- *  Search
+ *  Advanced search
  * ------------------------------------------------------------------ */
+
+/* ---- Regex helpers ---- */
+function escapeRegExp(s) {
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function buildTermSource(term, opts) {
+  const esc = escapeRegExp(term);
+  if (opts.match === 'whole') {
+    const start = /^\w/.test(term) ? '\\b' : '';
+    const end   = /\w$/.test(term) ? '\\b' : '';
+    return start + esc + end;
+  }
+  return esc;
+}
+
+function buildMatcher(raw, opts) {
+  if (!raw) return null;
+  const flags = opts.caseSensitive ? 'g' : 'gi';
+
+  if (opts.match === 'regex') {
+    try {
+      const re = new RegExp(raw, flags);
+      return {
+        test(text) { re.lastIndex = 0; return re.test(text); },
+      };
+    } catch (e) {
+      return { error: 'Invalid regular expression: ' + e.message };
+    }
+  }
+
+  let terms;
+  if (opts.logic === 'phrase') terms = [raw];
+  else terms = raw.split(/\s+/).filter(Boolean);
+  if (!terms.length) return null;
+
+  const regexes = terms.map(t => new RegExp(buildTermSource(t, opts), flags));
+  const requireAll = opts.logic !== 'any';
+
+  return {
+    test(text) {
+      if (requireAll) {
+        return regexes.every(re => { re.lastIndex = 0; return re.test(text); });
+      }
+      return regexes.some(re => { re.lastIndex = 0; return re.test(text); });
+    },
+  };
+}
+
+function buildHighlighter(raw, opts) {
+  const flags = opts.caseSensitive ? 'g' : 'gi';
+
+  if (opts.match === 'regex') {
+    try { return new RegExp(raw, flags); } catch (e) { return null; }
+  }
+
+  let terms;
+  if (opts.logic === 'phrase') terms = [raw];
+  else terms = raw.split(/\s+/).filter(Boolean);
+  if (!terms.length) return null;
+
+  const sources = terms
+    .slice()
+    .sort((a, b) => b.length - a.length)
+    .map(t => buildTermSource(t, opts));
+
+  return new RegExp(sources.join('|'), flags);
+}
+
+function makeAdvancedSnippet(text, highlighter) {
+  if (!highlighter) return escapeHtml(text.slice(0, 200));
+
+  highlighter.lastIndex = 0;
+  let first = null;
+  try { first = highlighter.exec(text); } catch (e) { first = null; }
+
+  let start = 0;
+  let end = Math.min(text.length, 200);
+  if (first) {
+    const matchLen = first[0].length || 1;
+    start = Math.max(0, first.index - 55);
+    end = Math.min(text.length, first.index + matchLen + 75);
+  }
+
+  const slice = text.slice(start, end);
+  highlighter.lastIndex = 0;
+
+  let out = '';
+  let last = 0;
+  let m;
+  let safety = 0;
+
+  while ((m = highlighter.exec(slice)) !== null && safety++ < 500) {
+    if (m.index > last) out += escapeHtml(slice.slice(last, m.index));
+    if (m[0].length === 0) {
+      out += escapeHtml(slice[m.index] || '');
+      last = m.index + 1;
+      highlighter.lastIndex = last;
+      continue;
+    }
+    out += '<mark>' + escapeHtml(m[0]) + '</mark>';
+    last = m.index + m[0].length;
+  }
+  if (last < slice.length) out += escapeHtml(slice.slice(last));
+
+  return (start > 0 ? '…' : '') + out + (end < text.length ? '…' : '');
+}
+
+/* ---- Search UI wiring ---- */
+
+function toggleAdvanced() {
+  const opening = els.advPanel.hidden;
+  els.advPanel.hidden = !opening;
+  els.advToggle.classList.toggle('active', opening);
+  els.advToggle.setAttribute('aria-expanded', String(opening));
+  if (opening && els.searchDropdown) els.searchDropdown.scrollTop = 0;
+  syncDropdown();
+}
+
+function syncDropdown() {
+  const resultsOpen = els.searchResults.classList.contains('open');
+  const advOpen = els.advPanel && !els.advPanel.hidden;
+  els.searchDropdown.classList.toggle('open', resultsOpen || advOpen);
+}
+
+function onAdvancedChange() {
+  syncAdvancedHint();
+  const q = els.search.value.trim();
+  if (q) performSearch(q);
+  else syncDropdown();
+}
+
+function syncAdvancedHint() {
+  if (!els.advHint) return;
+  const o = state.searchOpts;
+  let text;
+  if (o.match === 'regex') {
+    text = 'Regex mode: the whole query is a JavaScript regular expression. Multi-word options are ignored.';
+  } else if (o.logic === 'phrase') {
+    text = o.match === 'whole'
+      ? 'Finds the exact phrase as whole words.'
+      : 'Finds the exact phrase anywhere in the text.';
+  } else if (o.logic === 'all') {
+    text = o.match === 'whole'
+      ? 'Finds paragraphs containing every word as whole words.'
+      : 'Finds paragraphs containing every word (as substrings).';
+  } else {
+    text = o.match === 'whole'
+      ? 'Finds paragraphs containing any of the words as whole words.'
+      : 'Finds paragraphs containing any of the words (as substrings).';
+  }
+  if (o.caseSensitive) text += ' Case-sensitive.';
+  els.advHint.textContent = text;
+
+  if (els.advLogicGroup) {
+    els.advLogicGroup.classList.toggle('disabled', o.match === 'regex');
+  }
+
+  if (els.advToggle) {
+    const active = o.match !== 'contains' || o.logic !== 'all' || o.caseSensitive;
+    els.advToggle.classList.toggle('has-active', active);
+  }
+}
+
+function bindAdvancedSearch() {
+  if (!els.advToggle) return;
+
+  els.advToggle.addEventListener('click', toggleAdvanced);
+
+  document.querySelectorAll('#advanced-search [data-match]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.searchOpts.match = btn.dataset.match;
+      document.querySelectorAll('#advanced-search [data-match]')
+        .forEach(b => b.classList.toggle('active', b === btn));
+      onAdvancedChange();
+    });
+  });
+
+  document.querySelectorAll('#advanced-search [data-logic]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.searchOpts.logic = btn.dataset.logic;
+      document.querySelectorAll('#advanced-search [data-logic]')
+        .forEach(b => b.classList.toggle('active', b === btn));
+      onAdvancedChange();
+    });
+  });
+
+  const caseBox = $('#adv-case');
+  if (caseBox) {
+    caseBox.addEventListener('change', () => {
+      state.searchOpts.caseSensitive = caseBox.checked;
+      onAdvancedChange();
+    });
+  }
+
+  syncAdvancedHint();
+}
+
+/* ---- Search execution ---- */
+
 function onSearchInput() {
   const q = els.search.value.trim();
   clearTimeout(searchTimer);
-  if (!q) { closeSearch(); return; }
+  if (!q) {
+    els.searchResults.classList.remove('open');
+    syncDropdown();
+    return;
+  }
   searchTimer = setTimeout(() => performSearch(q), 110);
 }
 
 function performSearch(q) {
   const results = [];
-  const ql = q.toLowerCase();
   const MAX = 60;
+  const opts = state.searchOpts;
+  const trimmed = q.trim();
 
-  if (/^\d+$/.test(q)) {
-    const n = parseInt(q, 10);
+  if (opts.match !== 'regex' && /^\d+$/.test(trimmed)) {
+    const n = parseInt(trimmed, 10);
     if (state.cccMap[n]) {
       results.push({
         type: 'ccc', ccc: n,
@@ -1721,15 +1991,27 @@ function performSearch(q) {
     }
   }
 
+  const matcher = buildMatcher(trimmed, opts);
+
+  if (matcher && matcher.error) {
+    renderSearchResults([{ type: 'error', message: matcher.error }], q);
+    return;
+  }
+  if (!matcher) {
+    renderSearchResults(results, q);
+    return;
+  }
+
+  const highlighter = buildHighlighter(trimmed, opts);
+
   outer:
   for (const id of state.order) {
     const paras = state.searchData[id] || [];
     for (const p of paras) {
-      const idx = p.lower.indexOf(ql);
-      if (idx >= 0) {
+      if (matcher.test(p.text)) {
         results.push({
           type: 'text', pageId: id, paraIndex: p.idx,
-          snippet: makeSnippet(p.text, idx, ql.length),
+          snippet: makeAdvancedSnippet(p.text, highlighter),
         });
         if (results.length >= MAX) break outer;
       }
@@ -1743,12 +2025,24 @@ function renderSearchResults(results, q) {
   const box = els.searchResults;
   box.innerHTML = '';
 
+  const err = results.find(r => r.type === 'error');
+  if (err) {
+    const item = document.createElement('div');
+    item.className = 'sr-empty';
+    item.textContent = err.message;
+    box.appendChild(item);
+    box.classList.add('open');
+    syncDropdown();
+    return;
+  }
+
   if (!results.length) {
     const empty = document.createElement('div');
     empty.className = 'sr-empty';
     empty.textContent = 'No results for “' + q + '”.';
     box.appendChild(empty);
     box.classList.add('open');
+    syncDropdown();
     return;
   }
 
@@ -1787,20 +2081,210 @@ function renderSearchResults(results, q) {
   }
 
   box.classList.add('open');
-}
-
-function makeSnippet(text, idx, len) {
-  const start = Math.max(0, idx - 55);
-  const end = Math.min(text.length, idx + len + 75);
-  return (start > 0 ? '…' : '') +
-    escapeHtml(text.slice(start, idx)) +
-    '<mark>' + escapeHtml(text.slice(idx, idx + len)) + '</mark>' +
-    escapeHtml(text.slice(idx + len, end)) +
-    (end < text.length ? '…' : '');
+  syncDropdown();
 }
 
 function closeSearch() {
   els.searchResults.classList.remove('open');
+  if (els.advPanel) els.advPanel.hidden = true;
+  if (els.advToggle) {
+    els.advToggle.classList.remove('active');
+    els.advToggle.setAttribute('aria-expanded', 'false');
+  }
+  syncDropdown();
+}
+
+/* ------------------------------------------------------------------ *
+ *  Paragraph context menu (right-click on a highlighted paragraph number)
+ * ------------------------------------------------------------------ */
+
+/** Inject the menu markup + styles on first use. */
+function ensureParaMenu() {
+  if (paraMenuEl) return paraMenuEl;
+
+  if (!document.getElementById('para-context-menu-style')) {
+    const style = document.createElement('style');
+    style.id = 'para-context-menu-style';
+    style.textContent = `
+      #para-context-menu {
+        position: fixed; z-index: 120; min-width: 230px;
+        background: var(--bg); border: 1px solid var(--border);
+        border-radius: 9px; box-shadow: 0 12px 40px var(--shadow);
+        padding: 5px; display: none; font-family: var(--sans);
+        font-size: 0.84rem;
+      }
+      #para-context-menu.open { display: block; }
+      #para-context-menu .pcm-header {
+        padding: 6px 10px 7px; font-size: 0.7rem; text-transform: uppercase;
+        letter-spacing: 0.06em; color: var(--muted); font-weight: 700;
+        border-bottom: 1px solid var(--border); margin-bottom: 4px;
+      }
+      #para-context-menu button {
+        display: block; width: 100%; text-align: left; background: none;
+        border: none; color: var(--text); padding: 8px 10px; border-radius: 6px;
+        font-family: var(--sans); font-size: 0.84rem; cursor: pointer;
+      }
+      #para-context-menu button:hover,
+      #para-context-menu button:focus-visible {
+        background: var(--bg-alt); color: var(--accent); outline: none;
+      }
+      #para-context-menu .pcm-status {
+        padding: 7px 10px 3px; font-size: 0.75rem; color: var(--muted);
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  const menu = document.createElement('div');
+  menu.id = 'para-context-menu';
+  menu.setAttribute('role', 'menu');
+  menu.innerHTML =
+    '<div class="pcm-header" role="presentation"></div>' +
+    '<button type="button" role="menuitem" data-action="link">Copy link to paragraph</button>' +
+    '<button type="button" role="menuitem" data-action="text">Copy text</button>' +
+    '<button type="button" role="menuitem" data-action="number">Copy paragraph number</button>' +
+    '<div class="pcm-status" role="status" aria-live="polite" hidden></div>';
+
+  menu.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  menu.addEventListener('click', (e) => {
+    const btn = e.target.closest ? e.target.closest('button[data-action]') : null;
+    if (!btn || !paraMenuTarget) return;
+
+    const { n, paraEl } = paraMenuTarget;
+    let payload = '';
+
+    if (btn.dataset.action === 'link') payload = buildParaLink(n);
+    else if (btn.dataset.action === 'number') payload = String(n);
+    else if (btn.dataset.action === 'text') payload = paragraphText(paraEl);
+
+    copyToClipboard(payload).then((ok) => {
+      const status = menu.querySelector('.pcm-status');
+      if (status) {
+        status.hidden = false;
+        status.textContent = ok ? 'Copied!' : 'Copy failed';
+      }
+      setTimeout(closeParaMenu, ok ? 650 : 1200);
+    });
+  });
+
+  document.body.appendChild(menu);
+  paraMenuEl = menu;
+  return menu;
+}
+
+function openParaMenu(x, y, n, paraEl) {
+  const menu = ensureParaMenu();
+  paraMenuTarget = { n, paraEl };
+
+  const header = menu.querySelector('.pcm-header');
+  if (header) header.textContent = 'CCC ' + n;
+
+  const status = menu.querySelector('.pcm-status');
+  if (status) { status.hidden = true; status.textContent = ''; }
+
+  menu.classList.add('open');
+  menu.style.left = '0px';
+  menu.style.top = '0px';
+
+  const r = menu.getBoundingClientRect();
+  let left = x;
+  let top = y;
+  if (left + r.width > window.innerWidth - 8) left = window.innerWidth - r.width - 8;
+  if (left < 8) left = 8;
+  if (top + r.height > window.innerHeight - 8) top = y - r.height;
+  if (top < 8) top = 8;
+
+  menu.style.left = left + 'px';
+  menu.style.top = top + 'px';
+}
+
+function closeParaMenu() {
+  if (paraMenuEl) paraMenuEl.classList.remove('open');
+  paraMenuTarget = null;
+}
+
+/** Right-click handler for #page — opens the paragraph menu on highlighted paragraphs. */
+function onPageContextMenu(e) {
+  const target = e.target;
+  const a = target && target.closest ? target.closest('a.ccc-ref') : null;
+  if (!a) return;
+
+  const paraEl = a.closest('.para.highlight');
+  if (!paraEl) return;
+
+  // Only the paragraph's own number (the first CCC link inside the paragraph).
+  if (paraEl.querySelector('a.ccc-ref') !== a) return;
+
+  const n = parseInt(a.textContent, 10);
+  if (!Number.isFinite(n)) return;
+
+  e.preventDefault();
+  hideTooltip();
+  openParaMenu(e.clientX, e.clientY, n, paraEl);
+}
+
+/** Build a `?p=N` deep link from the current browser URL (hash stripped). */
+function buildParaLink(n) {
+  try {
+    const u = new URL(location.href);
+    u.hash = '';
+    u.searchParams.set('p', String(n));
+    return u.href;
+  } catch (e) {
+    return location.href.split('#')[0] + '?p=' + encodeURIComponent(n);
+  }
+}
+
+/** Reconstruct a paragraph's plain text (including its § number) from the data model. */
+function paragraphText(paraEl) {
+  const idx = parseInt(paraEl.dataset.paraIndex, 10);
+  const page = state.currentId ? state.pageMap[state.currentId] : null;
+  const para = page && page.paragraphs ? page.paragraphs[idx] : null;
+
+  if (!para) return (paraEl.textContent || '').replace(/\s+/g, ' ').trim();
+
+  let out = '';
+  const append = (s) => {
+    if (!s) return;
+    if (out && /\w$/.test(out) && /^\w/.test(s)) out += ' ';
+    out += s;
+  };
+
+  for (const el of (para.elements || [])) {
+    if (el.type === 'text') append(el.text || '');
+    else if (el.type === 'ref-ccc') append(String(el.ref_number));
+    else if (el.type === 'spacer') append(' ');
+    // footnote refs are intentionally skipped
+  }
+  return out.replace(/\s+/g, ' ').trim();
+}
+
+/** Clipboard write with a legacy fallback. */
+async function copyToClipboard(text) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (e) { /* fall through */ }
+
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-1000px';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, ta.value.length);
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return ok;
+  } catch (e) {
+    return false;
+  }
 }
 
 /* ------------------------------------------------------------------ *
@@ -1822,6 +2306,7 @@ function bindUI() {
 
   document.addEventListener('click', (e) => {
     if (!els.searchWrap.contains(e.target)) closeSearch();
+    if (!paraMenuEl || !paraMenuEl.contains(e.target)) closeParaMenu();
   });
 
   document.addEventListener('keydown', (e) => {
@@ -1835,6 +2320,8 @@ function bindUI() {
         closeThemeDialog();
         return;
       }
+      closeSearch();
+      closeParaMenu();
       hideTooltip();
       closePreview();
     }
@@ -1846,6 +2333,12 @@ function bindUI() {
   });
 
   els.backdrop.addEventListener('click', closeSidebar);
+
+  /* ---- Paragraph context menu ---- */
+  els.page.addEventListener('contextmenu', onPageContextMenu);
+  document.addEventListener('scroll', closeParaMenu, true);
+  window.addEventListener('resize', closeParaMenu);
+  window.addEventListener('blur', closeParaMenu);
 
   /* ---- Theme dialog ---- */
   els.themeBtn.addEventListener('click', openThemeDialog);
@@ -1870,6 +2363,9 @@ function bindUI() {
   els.hueNumber.addEventListener('input', onHueNumberInput);
   els.hueNumber.addEventListener('change', onHueNumberCommit);
   els.hueNumber.addEventListener('blur', onHueNumberCommit);
+
+  /* ---- Advanced search ---- */
+  bindAdvancedSearch();
 
   /* ---- Preview ---- */
   $('#preview-close').addEventListener('click', closePreview);
@@ -1898,7 +2394,46 @@ function isTypingTarget(el) {
 /* ------------------------------------------------------------------ *
  *  Hash routing
  * ------------------------------------------------------------------ */
+
+/** Read ?p=<integer> from the query string. Returns null if absent/invalid. */
+function parseParagraphQuery() {
+  try {
+    const raw = new URLSearchParams(location.search).get('p');
+    if (!raw) return null;
+    const s = raw.trim();
+    if (!/^\d+$/.test(s)) return null;
+    const n = parseInt(s, 10);
+    return Number.isFinite(n) ? n : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/** Replace the URL with #/<id> and drop the consumed ?p= parameter. */
+function replaceHashAndClearP(id) {
+  try {
+    const u = new URL(location.href);
+    u.searchParams.delete('p');
+    u.hash = '#/' + id;
+    history.replaceState({ id }, '', u.href);
+  } catch (e) {
+    replaceHash(id);
+  }
+}
+
 function routeInitial() {
+  // ?p=<n> deep link — jump to that CCC paragraph and highlight it
+  const pNum = parseParagraphQuery();
+  if (pNum != null) {
+    const t = state.cccMap[pNum];
+    if (t) {
+      navigate(t.pageId, { highlightCcc: pNum, silentHash: true });
+      replaceHashAndClearP(t.pageId);
+      return;
+    }
+    // Paragraph not present in this data set — fall through to normal routing
+  }
+
   const hash = location.hash;
 
   let m = hash.match(/^#\/(.+)$/);
@@ -1980,17 +2515,15 @@ function applyTheme() {
   let bg, alt, side;
 
   if (dark) {
-    // 0 = fully black, 100 = dark grey
-    const v = Math.round(t * 58);                 // 0 → #000000, 100 → #3a3a3a
+    const v = Math.round(t * 58);
     const a = Math.min(255, v + 16);
     bg   = `rgb(${v}, ${v}, ${v})`;
     alt  = `rgb(${a}, ${a}, ${a})`;
     side = alt;
   } else {
-    // 0 = pure white, 100 = light warm tint
-    const r = Math.round(255 - t * 14);           // 255 → 241
-    const g = Math.round(255 - t * 20);           // 255 → 235
-    const b = Math.round(255 - t * 34);           // 255 → 221
+    const r = Math.round(255 - t * 14);
+    const g = Math.round(255 - t * 20);
+    const b = Math.round(255 - t * 34);
     bg   = `rgb(${r}, ${g}, ${b})`;
     side = `rgb(${clampByte(r - 4)}, ${clampByte(g - 6)}, ${clampByte(b - 13)})`;
     alt  = `rgb(${clampByte(r - 9)}, ${clampByte(g - 11)}, ${clampByte(b - 18)})`;
@@ -2003,7 +2536,6 @@ function applyTheme() {
   style.setProperty('--sidebar-bg', side);
   style.setProperty('--accent', dark ? `hsl(${h}, 53%, 74%)` : `hsl(${h}, 60%, 30%)`);
   style.setProperty('--accent-soft', dark ? `hsl(${h}, 18%, 17%)` : `hsl(${h}, 32%, 92%)`);
-  // Highlight tint follows the accent hue (light = pale wash, dark = deep wash)
   style.setProperty('--highlight', dark ? `hsl(${h}, 45%, 24%)` : `hsl(${h}, 85%, 82%)`);
 
   try {
